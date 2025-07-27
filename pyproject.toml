@@ -1,0 +1,84 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "fatum"
+version = "0.0.1"
+description = "A collection of code for Fatum."
+authors = [{name="GAO Hongnan", email="hongnangao@gmail.com"}]
+readme = "README.md"
+requires-python = ">=3.12"
+classifiers = [
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Programming Language :: Python :: 3.13",
+    "License :: OSI Approved :: Apache Software License",
+    "Operating System :: OS Independent",
+]
+
+dependencies = [
+    "anthropic>=0.59.0",
+    "google-genai>=1.27.0",
+    "instructor>=1.0.0",
+    "jsonref>=1.1.0",
+    "openai>=1.97.1",
+    "pydantic>=2.11.7",
+    "pydantic-settings>=2.10.1",
+]
+
+[project.urls]
+Homepage = "https://github.com/gao-hongnan/omniverse"
+Issues = "https://github.com/gao-hongnan/omniverse/issues"
+
+[tool.hatch.build.targets.wheel]
+packages = ["fatum"]
+
+[dependency-groups]
+lint = [
+    "bandit>=1.8.6",
+    "commitizen>=4.8.3",
+    "pre-commit>=4.2.0",
+    "ruff>=0.12.4",
+]
+
+type = [
+    "mypy",
+    "pyright>=1.1.403",
+    "typeguard>=4.4.4",
+    "types-pyyaml>=6.0.12.20250516",
+]
+
+test = [
+    "coverage>=7.9.2",
+    "pytest>=8.4.1",
+    "pytest-asyncio>=1.1.0",
+    "pytest-mock>=3.14.1",
+]
+
+docs = [
+    "jupyter-book>=2.0.0a0",
+]
+
+dev = [
+    { include-group = "lint" },
+    { include-group = "type" },
+    { include-group = "test" },
+    { include-group = "docs" },
+]
+
+[tool.bandit]
+exclude_dirs = [
+    ".eggs",
+    ".git",
+    ".hg",
+    ".mypy_cache",
+    ".tox",
+    "venv_*",
+    "venv",
+    ".venv",
+    "_build",
+    "buck-out",
+    "build",
+    "dist",
+]
