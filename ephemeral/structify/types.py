@@ -10,7 +10,7 @@ if TYPE_CHECKING:
     from google.generativeai.types import AsyncGenerateContentResponse
     from openai.types.chat import ChatCompletion
 
-    from ephemeralstructured.config import (
+    from ephemeral.structify.config import (
         BaseProviderConfig,
         CompletionClientParams,
         Message,

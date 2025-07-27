@@ -8,13 +8,13 @@ from google.generativeai.generative_models import GenerativeModel
 from google.generativeai.types import AsyncGenerateContentResponse, GenerationConfig
 from openai.types.chat import ChatCompletionMessageParam
 
-from ephemeralstructured.adapters.base import BaseAdapter
-from ephemeralstructured.config import GeminiProviderConfig
-from ephemeralstructured.types import BaseModelT
+from ephemeral.structify.adapters.base import BaseAdapter
+from ephemeral.structify.config import GeminiProviderConfig
+from ephemeral.structify.types import BaseModelT
 
 if TYPE_CHECKING:
-    from ephemeralstructured.config import CompletionResult, Message
-    from ephemeralstructured.hooks import CompletionTrace
+    from ephemeral.structify.config import CompletionResult, Message
+    from ephemeral.structify.hooks import CompletionTrace
 
 
 class GeminiAdapter(
@@ -63,7 +63,7 @@ class GeminiAdapter(
         with_hooks: bool = False,
         **kwargs: Any,
     ) -> BaseModelT | CompletionResult[BaseModelT, AsyncGenerateContentResponse]:
-        from ephemeralstructured.hooks import ahook_instructor
+        from ephemeral.structify.hooks import ahook_instructor
 
         formatted_messages = self._format_messages(messages)
 
@@ -85,7 +85,7 @@ class GeminiAdapter(
     ) -> AsyncIterator[
         BaseModelT | CompletionResult[BaseModelT, AsyncGenerateContentResponse]
     ]:
-        from ephemeralstructured.hooks import ahook_instructor
+        from ephemeral.structify.hooks import ahook_instructor
 
         captured: CompletionTrace[AsyncGenerateContentResponse]
         async with ahook_instructor(self.instructor, enable=with_hooks) as captured:

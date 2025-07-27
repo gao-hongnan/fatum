@@ -1,4 +1,4 @@
-from ephemeralstructured.config import (
+from ephemeral.structify.config import (
     AnthropicProviderConfig,
     CompletionResult,
     GeminiProviderConfig,
@@ -7,8 +7,8 @@ from ephemeralstructured.config import (
     ProviderConfig,
     TokenUsage,
 )
-from ephemeralstructured.factory import AdapterFactory
-from ephemeralstructured.hooks import CompletionTrace
+from ephemeral.structify.factory import AdapterFactory
+from ephemeral.structify.hooks import CompletionTrace
 
 __all__ = [
     "AdapterFactory",

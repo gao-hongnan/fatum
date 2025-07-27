@@ -2,17 +2,17 @@ from __future__ import annotations
 
 from typing import TYPE_CHECKING, overload
 
-from ephemeralstructured.adapters.anthropic import AnthropicAdapter
-from ephemeralstructured.adapters.gemini import GeminiAdapter
-from ephemeralstructured.adapters.openai import OpenAIAdapter
-from ephemeralstructured.config import (
+from ephemeral.structify.adapters.anthropic import AnthropicAdapter
+from ephemeral.structify.adapters.gemini import GeminiAdapter
+from ephemeral.structify.adapters.openai import OpenAIAdapter
+from ephemeral.structify.config import (
     AnthropicProviderConfig,
     GeminiProviderConfig,
     OpenAIProviderConfig,
 )
 
 if TYPE_CHECKING:
-    from ephemeralstructured.config import (
+    from ephemeral.structify.config import (
         AnthropicCompletionClientParams,
         CompletionClientParams,
         GeminiCompletionClientParams,

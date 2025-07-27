@@ -4,8 +4,8 @@ import instructor
 from anthropic import AsyncAnthropic
 from anthropic.types import Message as AnthropicResponse
 
-from ephemeralstructured.adapters.base import BaseAdapter
-from ephemeralstructured.config import AnthropicProviderConfig
+from ephemeral.structify.adapters.base import BaseAdapter
+from ephemeral.structify.config import AnthropicProviderConfig
 
 
 class AnthropicAdapter(

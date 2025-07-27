@@ -14,7 +14,7 @@ from openai.types.chat import (
     ChatCompletionUserMessageParam,
 )
 
-from ephemeralstructured.types import (
+from ephemeral.structify.types import (
     BaseModelT,
     BaseProviderConfigT,
     ClientT,
@@ -23,13 +23,13 @@ from ephemeralstructured.types import (
 )
 
 if TYPE_CHECKING:
-    from ephemeralstructured.config import (
+    from ephemeral.structify.config import (
         CompletionClientParams,
         CompletionResult,
         InstructorConfig,
         Message,
     )
-    from ephemeralstructured.hooks import CompletionTrace
+    from ephemeral.structify.hooks import CompletionTrace
 
 
 class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
@@ -138,7 +138,7 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
         with_hooks: bool = False,
         **kwargs: Any,
     ) -> BaseModelT | CompletionResult[BaseModelT, ResponseT]:
-        from ephemeralstructured.hooks import ahook_instructor
+        from ephemeral.structify.hooks import ahook_instructor
 
         formatted_messages = self._format_messages(messages)
 
@@ -186,7 +186,7 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
         response_model: type[BaseModelT],
         with_hooks: bool = False,
     ) -> AsyncIterator[BaseModelT | CompletionResult[BaseModelT, ResponseT]]:
-        from ephemeralstructured.hooks import ahook_instructor
+        from ephemeral.structify.hooks import ahook_instructor
 
         captured: CompletionTrace[ResponseT]
         async with ahook_instructor(self.instructor, enable=with_hooks) as captured:
@@ -204,7 +204,7 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
         captured: CompletionTrace[ResponseT],
         with_hooks: bool,
     ) -> BaseModelT | CompletionResult[BaseModelT, ResponseT]:
-        from ephemeralstructured.config import CompletionResult
+        from ephemeral.structify.config import CompletionResult
 
         if not with_hooks:
             return response

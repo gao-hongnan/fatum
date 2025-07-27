@@ -4,8 +4,8 @@ import instructor
 from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion
 
-from ephemeralstructured.adapters.base import BaseAdapter
-from ephemeralstructured.config import OpenAIProviderConfig
+from ephemeral.structify.adapters.base import BaseAdapter
+from ephemeral.structify.config import OpenAIProviderConfig
 
 
 class OpenAIAdapter(BaseAdapter[OpenAIProviderConfig, AsyncOpenAI, ChatCompletion]):

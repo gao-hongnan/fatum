@@ -7,7 +7,7 @@ import instructor
 from instructor.hooks import HookName
 from pydantic import BaseModel, ConfigDict, Field
 
-from ephemeralstructured.types import ResponseT
+from ephemeral.structify.types import ResponseT
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator

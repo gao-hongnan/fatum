@@ -5,8 +5,8 @@ from typing import Annotated, Generic
 import instructor
 from pydantic import BaseModel, ConfigDict, Field
 
-from ephemeralstructured.hooks import CompletionTrace
-from ephemeralstructured.types import (
+from ephemeral.structify.hooks import CompletionTrace
+from ephemeral.structify.types import (
     BaseModelT,
     Capability,
     MessageRole,
