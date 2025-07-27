@@ -24,14 +24,6 @@ class Message(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class TokenUsage(BaseModel):
-    input_tokens: int
-    output_tokens: int
-    total_tokens: int
-
-    model_config = ConfigDict(frozen=True)
-
-
 class Allowable(BaseModel):
     model_config = ConfigDict(extra="allow")
 
@@ -92,9 +84,7 @@ class GeminiCompletionClientParams(BaseClientParams):
 
 
 CompletionClientParams = Annotated[
-    OpenAICompletionClientParams
-    | AnthropicCompletionClientParams
-    | GeminiCompletionClientParams,
+    OpenAICompletionClientParams | AnthropicCompletionClientParams | GeminiCompletionClientParams,
     Field(discriminator="provider"),
 ]
 

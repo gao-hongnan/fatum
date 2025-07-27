@@ -7,7 +7,7 @@ from pydantic import BaseModel
 
 if TYPE_CHECKING:
     from anthropic.types import Message as AnthropicResponse
-    from google.generativeai.types import AsyncGenerateContentResponse
+    from google.genai.types import GenerateContentResponse
     from openai.types.chat import ChatCompletion
 
     from fatum.structify.config import (
@@ -20,12 +20,8 @@ BaseModelT = TypeVar("BaseModelT", bound=BaseModel)
 MessageT = TypeVar("MessageT", bound="Message")
 BaseProviderConfigT = TypeVar("BaseProviderConfigT", bound="BaseProviderConfig")
 ClientT = TypeVar("ClientT")
-CompletionClientParamsT = TypeVar(
-    "CompletionClientParamsT", bound="CompletionClientParams"
-)
-ResponseT = TypeVar(
-    "ResponseT", "ChatCompletion", "AnthropicResponse", "AsyncGenerateContentResponse"
-)
+CompletionClientParamsT = TypeVar("CompletionClientParamsT", bound="CompletionClientParams")
+ResponseT = TypeVar("ResponseT", "ChatCompletion", "AnthropicResponse", "GenerateContentResponse")
 
 
 class Provider(StrEnum):

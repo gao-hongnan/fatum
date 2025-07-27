@@ -151,7 +151,7 @@ async def ahook_instructor(
 
 
 from anthropic.types import Message as AnthropicResponse  # noqa: E402, F401
-from google.generativeai.types import AsyncGenerateContentResponse  # noqa: E402, F401
+from google.genai.types import GenerateContentResponse  # noqa: E402, F401
 from openai.types.chat import ChatCompletion  # noqa: E402, F401
 
 # NOTE: Rebuild the model to resolve forward references

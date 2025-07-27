@@ -14,21 +14,12 @@ from openai.types.chat import (
     ChatCompletionUserMessageParam,
 )
 
-from fatum.structify.types import (
-    BaseModelT,
-    BaseProviderConfigT,
-    ClientT,
-    MessageRole,
-    ResponseT,
-)
+from fatum.structify.config import CompletionResult
+from fatum.structify.hooks import ahook_instructor
+from fatum.structify.types import BaseModelT, BaseProviderConfigT, ClientT, MessageRole, ResponseT
 
 if TYPE_CHECKING:
-    from fatum.structify.config import (
-        CompletionClientParams,
-        CompletionResult,
-        InstructorConfig,
-        Message,
-    )
+    from fatum.structify.config import CompletionClientParams, CompletionResult, InstructorConfig, Message
     from fatum.structify.hooks import CompletionTrace
 
 
@@ -120,8 +111,6 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
         with_hooks: bool = False,
         **kwargs: Any,
     ) -> BaseModelT | CompletionResult[BaseModelT, ResponseT]:
-        from fatum.structify.hooks import ahook_instructor
-
         formatted_messages = self._format_messages(messages)
 
         captured: CompletionTrace[ResponseT]
@@ -168,8 +157,6 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
         response_model: type[BaseModelT],
         with_hooks: bool = False,
     ) -> AsyncIterator[BaseModelT | CompletionResult[BaseModelT, ResponseT]]:
-        from fatum.structify.hooks import ahook_instructor
-
         captured: CompletionTrace[ResponseT]
         async with ahook_instructor(self.instructor, enable=with_hooks) as captured:
             async for partial in self.instructor.create_partial(
@@ -186,8 +173,6 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
         captured: CompletionTrace[ResponseT],
         with_hooks: bool,
     ) -> BaseModelT | CompletionResult[BaseModelT, ResponseT]:
-        from fatum.structify.config import CompletionResult
-
         if not with_hooks:
             return response
 

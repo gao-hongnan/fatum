@@ -8,9 +8,7 @@ from fatum.structify.adapters.base import BaseAdapter
 from fatum.structify.config import AnthropicProviderConfig
 
 
-class AnthropicAdapter(
-    BaseAdapter[AnthropicProviderConfig, AsyncAnthropic, AnthropicResponse]
-):
+class AnthropicAdapter(BaseAdapter[AnthropicProviderConfig, AsyncAnthropic, AnthropicResponse]):
     def _create_client(self) -> AsyncAnthropic:
         return AsyncAnthropic(**self.provider_config.model_dump())
 
