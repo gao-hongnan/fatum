@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import argparse
 import asyncio
 from typing import Any
 
@@ -38,8 +39,6 @@ console = Console()
 
 
 class Settings(BaseSettings):
-    """Load settings from environment variables."""
-
     openai_api_key: str = Field(default="", alias="OPENAI__API_KEY")
     anthropic_api_key: str = Field(default="", alias="ANTHROPIC__API_KEY")
     gemini_api_key: str = Field(default="", alias="GEMINI__API_KEY")
@@ -79,8 +78,8 @@ class GeminiProvider(GeminiProviderConfig):
 
 
 class GeminiCompletion(GeminiCompletionClientParams):
-    model: str = Field(default="gemini-2.0-flash", exclude=True)
-    temperature: float = Field(default=0.7)
+    model: str = Field(default="gemini-2.5-flash", exclude=True)
+    temperature: float = Field(default=1.0)
     max_output_tokens: int = Field(default=1000)
 
 
@@ -92,8 +91,8 @@ class MovieReview(BaseModel):
     cons: list[str]
 
 
-def create_review_table(review: MovieReview) -> Table:
-    table = Table(title=f"🎬 {review.title}", show_header=True, header_style="bold magenta")
+def create_review_table(review: MovieReview, provider_name: str) -> Table:
+    table = Table(title=f"🎬 {review.title} - via {provider_name}", show_header=True, header_style="bold magenta")
 
     table.add_column("Aspect", style="cyan", width=12)
     table.add_column("Details", style="white")
@@ -104,26 +103,6 @@ def create_review_table(review: MovieReview) -> Table:
     table.add_row("Cons", "\n".join(f"❌ {con}" for con in review.cons))
 
     return table
-
-
-def display_trace_info(result: CompletionResult[Any, Any]) -> None:
-    json_display = Syntax(
-        code=result.trace.model_dump_json(indent=4, fallback=lambda x: str(x)),
-        lexer="json",
-        theme="monokai",
-        line_numbers=False,
-        word_wrap=True,
-    )
-
-    console.print(
-        Panel(
-            json_display,
-            title="📊 [bold cyan]Trace Information[/bold cyan]",
-            border_style="cyan",
-            padding=(1, 2),
-            expand=False,
-        )
-    )
 
 
 def format_streaming_text(partial: MovieReview) -> Text:
@@ -157,55 +136,65 @@ def format_streaming_text(partial: MovieReview) -> Text:
     return text
 
 
-async def openai_example() -> tuple[OpenAIAdapter, MovieReview]:
-    console.print(Panel.fit("🤖 OpenAI Example", style="bold blue"))
-
-    provider = OpenAIProvider(api_key=settings.openai_api_key)
-    completion = OpenAICompletion()
-    instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
-
-    adapter = AdapterFactory.create(
-        provider_config=provider,
-        completion_params=completion,
-        instructor_config=instructor_config,
+def display_trace_info(result: CompletionResult[Any, Any]) -> None:
+    json_display = Syntax(
+        code=result.trace.model_dump_json(indent=4, fallback=lambda x: str(x)),
+        lexer="json",
+        theme="monokai",
+        line_numbers=False,
+        word_wrap=True,
     )
 
-    messages: list[ChatCompletionMessageParam] = [
-        ChatCompletionSystemMessageParam(role="system", content="You are a helpful movie critic."),
-        ChatCompletionUserMessageParam(role="user", content="Review the movie 'Inception' for me."),
-    ]
+    console.print(
+        Panel(
+            json_display,
+            title="📊 [bold cyan]Trace Information[/bold cyan]",
+            border_style="cyan",
+            padding=(1, 2),
+            expand=False,
+        )
+    )
 
-    console.print("\n[cyan]1. Regular completion:[/cyan]")
+
+async def review_movie(
+    adapter: OpenAIAdapter | AnthropicAdapter | GeminiAdapter,
+    messages: list[ChatCompletionMessageParam],
+    provider_name: str,
+    show_trace: bool = False,
+) -> MovieReview:
+    console.print(Panel.fit(f"🤖 {provider_name} Example", style="bold blue"))
+
     with Progress(
         SpinnerColumn(),
         TextColumn("[progress.description]{task.description}"),
         transient=True,
     ) as progress:
-        progress.add_task(description="Getting review...", total=None)
-        review: MovieReview = await adapter.acreate(
-            messages=messages,
-            response_model=MovieReview,
-        )
+        progress.add_task(description=f"Getting review from {provider_name}...", total=None)
 
-    console.print(create_review_table(review))
+        if show_trace:
+            result = await adapter.acreate(
+                messages=messages,
+                response_model=MovieReview,
+                with_hooks=True,
+            )
+            review = result.data
+            display_trace_info(result)
+        else:
+            review = await adapter.acreate(
+                messages=messages,
+                response_model=MovieReview,
+            )
 
-    console.print("\n[cyan]2. Regular completion with hooks:[/cyan]")
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        transient=True,
-    ) as progress:
-        progress.add_task(description="Getting review with trace...", total=None)
-        result = await adapter.acreate(
-            messages=messages,
-            response_model=MovieReview,
-            with_hooks=True,
-        )
+    console.print(create_review_table(review, provider_name))
+    return review
 
-    console.print(create_review_table(result.data))
-    display_trace_info(result)
 
-    console.print("\n[cyan]3. Streaming completion:[/cyan]")
+async def review_movie_streaming(
+    adapter: OpenAIAdapter | AnthropicAdapter | GeminiAdapter,
+    messages: list[ChatCompletionMessageParam],
+    provider_name: str,
+) -> MovieReview:
+    console.print(Panel.fit(f"🤖 {provider_name} Streaming Example", style="bold blue"))
     console.print("[dim]Streaming updates...[/dim]\n")
 
     partial_count = 0
@@ -227,177 +216,71 @@ async def openai_example() -> tuple[OpenAIAdapter, MovieReview]:
     console.print(f"\n[green]✓ Streaming complete! Received {partial_count} partial updates[/green]")
     if final_review:
         console.print("\n[bold]Final Result:[/bold]")
-        console.print(create_review_table(final_review))
+        console.print(create_review_table(final_review, provider_name))
 
-    return adapter, review
+    return final_review or MovieReview(title="Unknown", rating=0, summary="", pros=[], cons=[])
 
 
-async def anthropic_example() -> tuple[AnthropicAdapter, MovieReview]:
-    console.print(Panel.fit("🧠 Anthropic Example", style="bold magenta"))
-
-    provider = AnthropicProvider(api_key=settings.anthropic_api_key)
-    completion = AnthropicCompletion()
-    instructor_config = InstructorConfig(mode=instructor.Mode.ANTHROPIC_TOOLS)
-
-    adapter = AdapterFactory.create(
-        provider_config=provider,
-        completion_params=completion,
-        instructor_config=instructor_config,
-    )
-
-    messages: list[ChatCompletionMessageParam] = [
-        ChatCompletionSystemMessageParam(role="system", content="You are a helpful movie critic."),
-        ChatCompletionUserMessageParam(role="user", content="Review the movie 'The Matrix' for me."),
-    ]
-
-    console.print("\n[cyan]1. Regular completion:[/cyan]")
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        transient=True,
-    ) as progress:
-        progress.add_task(description="Getting review...", total=None)
-        review: MovieReview = await adapter.acreate(
-            messages=messages,
-            response_model=MovieReview,
+def create_adapter(provider: str) -> OpenAIAdapter | AnthropicAdapter | GeminiAdapter:
+    if provider == "openai":
+        return AdapterFactory.create(
+            provider_config=OpenAIProvider(api_key=settings.openai_api_key),
+            completion_params=OpenAICompletion(),
+            instructor_config=InstructorConfig(mode=instructor.Mode.TOOLS),
         )
-
-    console.print(create_review_table(review))
-
-    console.print("\n[cyan]2. Regular completion with hooks:[/cyan]")
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        transient=True,
-    ) as progress:
-        progress.add_task(description="Getting review with trace...", total=None)
-        result = await adapter.acreate(
-            messages=messages,
-            response_model=MovieReview,
-            with_hooks=True,
+    elif provider == "anthropic":
+        return AdapterFactory.create(
+            provider_config=AnthropicProvider(api_key=settings.anthropic_api_key),
+            completion_params=AnthropicCompletion(),
+            instructor_config=InstructorConfig(mode=instructor.Mode.ANTHROPIC_TOOLS),
         )
-
-    console.print(create_review_table(result.data))
-    display_trace_info(result)
-
-    console.print("\n[cyan]3. Streaming completion:[/cyan]")
-    console.print("[dim]Streaming updates...[/dim]\n")
-
-    partial_count = 0
-    final_review = None
-
-    with Live(console=console, refresh_per_second=30, transient=False) as live:
-        async for partial_review in adapter.astream(
-            messages=messages,
-            response_model=MovieReview,
-        ):
-            partial_count += 1
-            final_review = partial_review
-
-            formatted = format_streaming_text(partial_review)
-            live.update(formatted)
-
-            await asyncio.sleep(0.02)
-
-    console.print(f"\n[green]✓ Streaming complete! Received {partial_count} partial updates[/green]")
-    if final_review:
-        console.print("\n[bold]Final Result:[/bold]")
-        console.print(create_review_table(final_review))
-
-    return adapter, review
-
-
-async def gemini_example() -> tuple[GeminiAdapter, MovieReview]:
-    console.print(Panel.fit("✨ Gemini Example", style="bold yellow"))
-
-    provider = GeminiProvider(api_key=settings.gemini_api_key)
-    completion = GeminiCompletion()
-    instructor_config = InstructorConfig(mode=instructor.Mode.GENAI_STRUCTURED_OUTPUTS)
-
-    adapter = AdapterFactory.create(
-        provider_config=provider,
-        completion_params=completion,
-        instructor_config=instructor_config,
-    )
-
-    messages: list[ChatCompletionMessageParam] = [
-        ChatCompletionSystemMessageParam(role="system", content="You are a helpful movie critic."),
-        ChatCompletionUserMessageParam(role="user", content="Review the movie 'John Wick' for me."),
-    ]
-
-    console.print("\n[cyan]1. Regular completion:[/cyan]")
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        transient=True,
-    ) as progress:
-        progress.add_task(description="Getting review...", total=None)
-        review: MovieReview = await adapter.acreate(
-            messages=messages,
-            response_model=MovieReview,
+    elif provider == "gemini":
+        return AdapterFactory.create(
+            provider_config=GeminiProvider(api_key=settings.gemini_api_key),
+            completion_params=GeminiCompletion(),
+            instructor_config=InstructorConfig(mode=instructor.Mode.GENAI_STRUCTURED_OUTPUTS),
         )
-
-    console.print(create_review_table(review))
-
-    console.print("\n[cyan]2. Regular completion with hooks:[/cyan]")
-    with Progress(
-        SpinnerColumn(),
-        TextColumn("[progress.description]{task.description}"),
-        transient=True,
-    ) as progress:
-        progress.add_task(description="Getting review with trace...", total=None)
-        result = await adapter.acreate(
-            messages=messages,
-            response_model=MovieReview,
-            with_hooks=True,
-        )
-
-    console.print(create_review_table(result.data))
-    display_trace_info(result)
-
-    console.print("\n[cyan]3. Streaming completion:[/cyan]")
-    console.print("[dim]Streaming updates...[/dim]\n")
-
-    partial_count = 0
-    final_review = None
-
-    with Live(console=console, refresh_per_second=30, transient=False) as live:
-        async for partial_review in adapter.astream(
-            messages=messages,
-            response_model=MovieReview,
-        ):
-            partial_count += 1
-            final_review = partial_review
-
-            formatted = format_streaming_text(partial_review)
-            live.update(formatted)
-
-            await asyncio.sleep(0.02)
-
-    console.print(f"\n[green]✓ Streaming complete! Received {partial_count} partial updates[/green]")
-    if final_review:
-        console.print("\n[bold]Final Result:[/bold]")
-        console.print(create_review_table(final_review))
-
-    return adapter, review
+    else:
+        raise ValueError(f"Unknown provider: {provider}")
 
 
 async def main() -> None:
+    parser = argparse.ArgumentParser(description="Movie review with different LLM providers")
+    parser.add_argument(
+        "--provider",
+        choices=["openai", "anthropic", "gemini", "all"],
+        default="all",
+        help="LLM provider to use (default: all)",
+    )
+    parser.add_argument("--movie", default="Inception", help="Movie to review (default: Inception)")
+    parser.add_argument("--trace", action="store_true", help="Show trace information")
+    parser.add_argument("--stream", action="store_true", help="Use streaming mode")
+    args = parser.parse_args()
+
     console.print(
         Panel.fit(
-            "🎬 [bold]Structify Demo[/bold] 🎬\n[dim]Demonstrating structured output with multiple LLM providers[/dim]",
+            "🎬 [bold]Structify Demo[/bold] 🎬\n[dim]Unified interface for multiple LLM providers[/dim]",
             style="bold green",
         )
     )
 
-    examples = [
-        ("OpenAI", openai_example),
-        ("Anthropic", anthropic_example),
-        ("Gemini", gemini_example),
+    messages: list[ChatCompletionMessageParam] = [
+        ChatCompletionSystemMessageParam(role="system", content="You are a helpful movie critic."),
+        ChatCompletionUserMessageParam(role="user", content=f"Review the movie '{args.movie}' for me."),
     ]
 
-    for _, example_func in examples:
-        await example_func()
+    providers = ["openai", "anthropic", "gemini"] if args.provider == "all" else [args.provider]
+
+    for i, provider in enumerate(providers):
+        adapter = create_adapter(provider)
+
+        if args.stream:
+            await review_movie_streaming(adapter, messages, provider.title())
+        else:
+            await review_movie(adapter, messages, provider.title(), show_trace=args.trace)
+
+        if i < len(providers) - 1:
+            console.print("\n" + "=" * 50 + "\n")
 
     console.print("\n" + "=" * 50)
     console.print(Panel.fit("✅ [bold green]Demo Complete![/bold green]", style="green"))
