@@ -25,6 +25,7 @@ dependencies = [
     "openai>=1.97.1",
     "pydantic>=2.11.7",
     "pydantic-settings>=2.10.1",
+    "rich>=13.0.0",
 ]
 
 [project.urls]
