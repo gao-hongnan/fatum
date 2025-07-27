@@ -13,7 +13,7 @@ from fatum.structify.hooks import ahook_instructor
 from fatum.structify.types import BaseModelT
 
 if TYPE_CHECKING:
-    from fatum.structify.config import CompletionResult, Message
+    from fatum.structify.config import CompletionResult
     from fatum.structify.hooks import CompletionTrace
 
 
@@ -23,12 +23,16 @@ class GeminiAdapter(BaseAdapter[GeminiProviderConfig, genai.Client, GenerateCont
 
     def _with_instructor(self) -> instructor.AsyncInstructor:
         client: genai.Client = self.client
-        return instructor.from_genai(client, use_async=True, mode=self.instructor_config.mode)  # type: ignore[no-any-return]
+        result: instructor.AsyncInstructor = instructor.from_genai(
+            client, use_async=True, mode=self.instructor_config.mode
+        )
+        assert isinstance(result, instructor.AsyncInstructor)
+        return result
 
     @overload
     async def acreate(
         self,
-        messages: list[Message],
+        messages: list[ChatCompletionMessageParam],
         response_model: type[BaseModelT],
         *,
         with_hooks: Literal[False] = False,
@@ -38,7 +42,7 @@ class GeminiAdapter(BaseAdapter[GeminiProviderConfig, genai.Client, GenerateCont
     @overload
     async def acreate(
         self,
-        messages: list[Message],
+        messages: list[ChatCompletionMessageParam],
         response_model: type[BaseModelT],
         *,
         with_hooks: Literal[True],
@@ -47,12 +51,11 @@ class GeminiAdapter(BaseAdapter[GeminiProviderConfig, genai.Client, GenerateCont
 
     async def acreate(
         self,
-        messages: list[Message],
+        messages: list[ChatCompletionMessageParam],
         response_model: type[BaseModelT],
         with_hooks: bool = False,
         **kwargs: Any,
     ) -> BaseModelT | CompletionResult[BaseModelT, GenerateContentResponse]:
-        formatted_messages = self._format_messages(messages)
         model = self.completion_params.model
         config = GenerateContentConfig(**self.completion_params.model_dump(exclude={"model"}))
         captured: CompletionTrace[GenerateContentResponse]
@@ -61,7 +64,7 @@ class GeminiAdapter(BaseAdapter[GeminiProviderConfig, genai.Client, GenerateCont
             response = await self.instructor.create(
                 model=model,
                 response_model=response_model,
-                messages=formatted_messages,
+                messages=messages,
                 **self.instructor_config.model_dump(exclude={"mode"}),
                 config=config,
                 **kwargs,
@@ -70,7 +73,7 @@ class GeminiAdapter(BaseAdapter[GeminiProviderConfig, genai.Client, GenerateCont
 
     async def _astream(
         self,
-        formatted_messages: list[ChatCompletionMessageParam],
+        messages: list[ChatCompletionMessageParam],
         response_model: type[BaseModelT],
         with_hooks: bool = False,
     ) -> AsyncIterator[BaseModelT | CompletionResult[BaseModelT, GenerateContentResponse]]:
@@ -82,7 +85,7 @@ class GeminiAdapter(BaseAdapter[GeminiProviderConfig, genai.Client, GenerateCont
             async for partial in self.instructor.create_partial(
                 model=model,
                 response_model=response_model,
-                messages=formatted_messages,
+                messages=messages,
                 **self.instructor_config.model_dump(exclude={"mode"}),
                 config=config,
             ):

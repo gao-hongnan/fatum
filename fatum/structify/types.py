@@ -13,11 +13,9 @@ if TYPE_CHECKING:
     from fatum.structify.config import (
         BaseProviderConfig,
         CompletionClientParams,
-        Message,
     )
 
 BaseModelT = TypeVar("BaseModelT", bound=BaseModel)
-MessageT = TypeVar("MessageT", bound="Message")
 BaseProviderConfigT = TypeVar("BaseProviderConfigT", bound="BaseProviderConfig")
 ClientT = TypeVar("ClientT")
 CompletionClientParamsT = TypeVar("CompletionClientParamsT", bound="CompletionClientParams")
@@ -34,12 +32,3 @@ class Capability(StrEnum):
     COMPLETION = "completion"
     EMBEDDING = "embedding"
     VISION = "vision"
-
-
-class MessageRole(StrEnum):
-    SYSTEM = "system"
-    USER = "user"
-    ASSISTANT = "assistant"
-    FUNCTION = "function"
-    TOOL = "tool"
-    DEVELOPER = "developer"

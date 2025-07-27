@@ -4,22 +4,14 @@ from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, AsyncIterator, Generic, Literal, overload
 
 from instructor import AsyncInstructor
-from openai.types.chat import (
-    ChatCompletionAssistantMessageParam,
-    ChatCompletionDeveloperMessageParam,
-    ChatCompletionFunctionMessageParam,
-    ChatCompletionMessageParam,
-    ChatCompletionSystemMessageParam,
-    ChatCompletionToolMessageParam,
-    ChatCompletionUserMessageParam,
-)
+from openai.types.chat import ChatCompletionMessageParam
 
 from fatum.structify.config import CompletionResult
 from fatum.structify.hooks import ahook_instructor
-from fatum.structify.types import BaseModelT, BaseProviderConfigT, ClientT, MessageRole, ResponseT
+from fatum.structify.types import BaseModelT, BaseProviderConfigT, ClientT, ResponseT
 
 if TYPE_CHECKING:
-    from fatum.structify.config import CompletionClientParams, CompletionResult, InstructorConfig, Message
+    from fatum.structify.config import CompletionClientParams, CompletionResult, InstructorConfig
     from fatum.structify.hooks import CompletionTrace
 
 
@@ -55,39 +47,10 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
     @abstractmethod
     def _with_instructor(self) -> AsyncInstructor: ...
 
-    def _format_messages(self, messages: list[Message]) -> list[ChatCompletionMessageParam]:
-        formatted: list[ChatCompletionMessageParam] = []
-        for msg in messages:
-            match msg.role:
-                case MessageRole.USER:
-                    formatted.append(ChatCompletionUserMessageParam(role="user", content=msg.content))
-                case MessageRole.ASSISTANT:
-                    formatted.append(ChatCompletionAssistantMessageParam(role="assistant", content=msg.content))
-                case MessageRole.SYSTEM:
-                    formatted.append(ChatCompletionSystemMessageParam(role="system", content=msg.content))
-                case MessageRole.FUNCTION:
-                    if msg.name is not None:
-                        formatted.append(
-                            ChatCompletionFunctionMessageParam(role="function", name=msg.name, content=msg.content)
-                        )
-                case MessageRole.TOOL:
-                    if msg.tool_call_id is not None:
-                        formatted.append(
-                            ChatCompletionToolMessageParam(
-                                role="tool",
-                                content=msg.content,
-                                tool_call_id=msg.tool_call_id,
-                            )
-                        )
-                case MessageRole.DEVELOPER:
-                    formatted.append(ChatCompletionDeveloperMessageParam(role="developer", content=msg.content))
-
-        return formatted
-
     @overload
     async def acreate(
         self,
-        messages: list[Message],
+        messages: list[ChatCompletionMessageParam],
         response_model: type[BaseModelT],
         *,
         with_hooks: Literal[False] = False,
@@ -97,7 +60,7 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
     @overload
     async def acreate(
         self,
-        messages: list[Message],
+        messages: list[ChatCompletionMessageParam],
         response_model: type[BaseModelT],
         *,
         with_hooks: Literal[True],
@@ -106,18 +69,16 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
 
     async def acreate(
         self,
-        messages: list[Message],
+        messages: list[ChatCompletionMessageParam],
         response_model: type[BaseModelT],
         with_hooks: bool = False,
         **kwargs: Any,
     ) -> BaseModelT | CompletionResult[BaseModelT, ResponseT]:
-        formatted_messages = self._format_messages(messages)
-
         captured: CompletionTrace[ResponseT]
         async with ahook_instructor(self.instructor, enable=with_hooks) as captured:
             response = await self.instructor.create(
                 response_model=response_model,
-                messages=formatted_messages,
+                messages=messages,
                 **self.instructor_config.model_dump(exclude={"mode"}),
                 **self.completion_params.model_dump(),
                 **kwargs,
@@ -127,7 +88,7 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
     @overload
     def astream(
         self,
-        messages: list[Message],
+        messages: list[ChatCompletionMessageParam],
         response_model: type[BaseModelT],
         *,
         with_hooks: Literal[False] = False,
@@ -136,7 +97,7 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
     @overload
     def astream(
         self,
-        messages: list[Message],
+        messages: list[ChatCompletionMessageParam],
         response_model: type[BaseModelT],
         *,
         with_hooks: Literal[True],
@@ -144,16 +105,15 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
 
     def astream(
         self,
-        messages: list[Message],
+        messages: list[ChatCompletionMessageParam],
         response_model: type[BaseModelT],
         with_hooks: bool = False,
     ) -> AsyncIterator[BaseModelT | CompletionResult[BaseModelT, ResponseT]]:
-        formatted_messages = self._format_messages(messages)
-        return self._astream(formatted_messages, response_model, with_hooks)
+        return self._astream(messages, response_model, with_hooks)
 
     async def _astream(
         self,
-        formatted_messages: list[ChatCompletionMessageParam],
+        messages: list[ChatCompletionMessageParam],
         response_model: type[BaseModelT],
         with_hooks: bool = False,
     ) -> AsyncIterator[BaseModelT | CompletionResult[BaseModelT, ResponseT]]:
@@ -161,7 +121,7 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
         async with ahook_instructor(self.instructor, enable=with_hooks) as captured:
             async for partial in self.instructor.create_partial(
                 response_model=response_model,
-                messages=formatted_messages,
+                messages=messages,
                 **self.instructor_config.model_dump(exclude={"mode"}),
                 **self.completion_params.model_dump(),
             ):

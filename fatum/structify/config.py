@@ -9,19 +9,9 @@ from fatum.structify.hooks import CompletionTrace
 from fatum.structify.types import (
     BaseModelT,
     Capability,
-    MessageRole,
     Provider,
     ResponseT,
 )
-
-
-class Message(BaseModel):
-    role: MessageRole
-    content: str
-    name: str | None = None
-    tool_call_id: str | None = None
-
-    model_config = ConfigDict(frozen=True)
 
 
 class Allowable(BaseModel):

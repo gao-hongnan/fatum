@@ -69,9 +69,10 @@ def _setup_hooks(
     return captured, hooks
 
 
-@asynccontextmanager
+@asynccontextmanager  # type: ignore[arg-type]
 async def ahook_instructor(
-    client: instructor.AsyncInstructor, enable: bool = True
+    client: instructor.AsyncInstructor,
+    enable: bool = True,
 ) -> AsyncIterator[CompletionTrace[ResponseT]]:
     """
     Capture execution details from an asynchronous instructor client.
@@ -150,9 +151,9 @@ async def ahook_instructor(
             client.off(hook_name, handler)
 
 
-from anthropic.types import Message as AnthropicResponse  # noqa: E402, F401
-from google.genai.types import GenerateContentResponse  # noqa: E402, F401
-from openai.types.chat import ChatCompletion  # noqa: E402, F401
+from anthropic.types import Message as AnthropicResponse  # noqa: E402, F401 # type: ignore
+from google.genai.types import GenerateContentResponse  # noqa: E402, F401 # type: ignore
+from openai.types.chat import ChatCompletion  # noqa: E402, F401 # type: ignore
 
 # NOTE: Rebuild the model to resolve forward references
 CompletionTrace.model_rebuild()
