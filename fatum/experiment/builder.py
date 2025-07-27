@@ -20,9 +20,7 @@ class ExperimentBuilder:
         self._storage: StorageBackend | None = None
         self._auto_timestamp: bool = False
 
-    def with_id(
-        self, experiment_id: ExperimentID, auto_timestamp: bool = False
-    ) -> ExperimentBuilder:
+    def with_id(self, experiment_id: ExperimentID, auto_timestamp: bool = False) -> ExperimentBuilder:
         self._config.experiment_id = experiment_id
         if auto_timestamp:
             self._auto_timestamp = True

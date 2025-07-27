@@ -39,9 +39,7 @@ class ExperimentMetadataModel(BaseModel):
     def validate_status(cls, value: str) -> str:
         valid_statuses = ALL_STATUSES
         if value not in valid_statuses:
-            raise ValueError(
-                f"Invalid status: {value}. Must be one of {valid_statuses}"
-            )
+            raise ValueError(f"Invalid status: {value}. Must be one of {valid_statuses}")
         return value
 
 

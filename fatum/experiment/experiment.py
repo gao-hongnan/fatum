@@ -81,7 +81,7 @@ from fatum.experiment.types import (
     RelativePath,
     StorageKey,
 )
-from frostbound.versioning.git_info import get_git_info
+from fatum.reproducibility.git import get_git_info
 
 if TYPE_CHECKING:
     from fatum.experiment.protocols import StorageBackend
@@ -185,9 +185,7 @@ class Experiment:
     def parameters(self) -> dict[ParameterKey, Any]:
         return self._parameters.copy()
 
-    def save_artifact(
-        self, source_file: FilePath, artifact_path: ArtifactPath | None = None
-    ) -> ArtifactKey:
+    def save_artifact(self, source_file: FilePath, artifact_path: ArtifactPath | None = None) -> ArtifactKey:
         """
         Save a single file to the experiment's artifacts directory (category-based).
 
@@ -241,9 +239,7 @@ class Experiment:
         - Files are always saved under artifacts/ category
         - Use save_file() if you need to bypass the artifacts/ prefix
         """
-        request = SaveArtifactRequest(
-            source_file=Path(source_file), artifact_path=artifact_path
-        )
+        request = SaveArtifactRequest(source_file=Path(source_file), artifact_path=artifact_path)
 
         filename = request.source_file.name
 
@@ -335,9 +331,7 @@ class Experiment:
         - Empty directories are not created (only files are saved)
         - Large directories may take significant time to process
         """
-        request = SaveArtifactsRequest(
-            source_directory=Path(source_directory), artifact_path=artifact_path
-        )
+        request = SaveArtifactsRequest(source_directory=Path(source_directory), artifact_path=artifact_path)
 
         artifact_keys: list[ArtifactKey] = []
 
@@ -347,24 +341,18 @@ class Experiment:
                 relative_path = file_path.relative_to(request.source_directory)
 
                 if request.artifact_path:
-                    dest_path = posixpath.join(
-                        request.artifact_path, relative_path.as_posix()
-                    )
+                    dest_path = posixpath.join(request.artifact_path, relative_path.as_posix())
                 else:
                     dest_path = relative_path.as_posix()
 
-                storage_key = self._generate_storage_key(
-                    Categories.ARTIFACTS, dest_path
-                )
+                storage_key = self._generate_storage_key(Categories.ARTIFACTS, dest_path)
                 self._storage.save(storage_key, file_path)
                 self._artifacts[storage_key] = storage_key
                 artifact_keys.append(storage_key)
 
         return artifact_keys
 
-    def save_file(
-        self, source_file: FilePath, relative_path: RelativePath
-    ) -> StorageKey:
+    def save_file(self, source_file: FilePath, relative_path: RelativePath) -> StorageKey:
         """
         Save file to any relative path within experiment directory (direct path saving).
 
