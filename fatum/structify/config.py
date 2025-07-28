@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Annotated, Generic
+from typing import Annotated, Generic, Literal
 
 import instructor
 from pydantic import BaseModel, ConfigDict, Field
@@ -19,20 +19,19 @@ class Allowable(BaseModel):
 
 
 class BaseProviderConfig(Allowable):
-    provider: Provider = Field(exclude=True)
     api_key: str
 
 
 class OpenAIProviderConfig(BaseProviderConfig):
-    provider: Provider = Field(default=Provider.OPENAI, exclude=True)
+    provider: Literal["openai"] = Field(default=Provider.OPENAI.value, exclude=True)
 
 
 class AnthropicProviderConfig(BaseProviderConfig):
-    provider: Provider = Field(default=Provider.ANTHROPIC, exclude=True)
+    provider: Literal["anthropic"] = Field(default=Provider.ANTHROPIC.value, exclude=True)
 
 
 class GeminiProviderConfig(BaseProviderConfig):
-    provider: Provider = Field(default=Provider.GEMINI, exclude=True)
+    provider: Literal["gemini"] = Field(default=Provider.GEMINI.value, exclude=True)
 
 
 ProviderConfig = Annotated[
@@ -42,34 +41,33 @@ ProviderConfig = Annotated[
 
 
 class BaseClientParams(Allowable):
-    provider: Provider = Field(exclude=True)
     capability: Capability = Field(exclude=True)
 
     model: str
 
 
 class OpenAICompletionClientParams(BaseClientParams):
-    provider: Provider = Field(default=Provider.OPENAI, exclude=True)
+    provider: Literal["openai"] = Field(default=Provider.OPENAI.value, exclude=True)
     capability: Capability = Field(default=Capability.COMPLETION, exclude=True)
 
 
 class OpenAIEmbeddingClientParams(BaseClientParams):
-    provider: Provider = Field(default=Provider.OPENAI, exclude=True)
+    provider: Literal["openai"] = Field(default=Provider.OPENAI.value, exclude=True)
     capability: Capability = Field(default=Capability.EMBEDDING, exclude=True)
 
 
 class OpenAIVisionClientParams(BaseClientParams):
-    provider: Provider = Field(default=Provider.OPENAI, exclude=True)
+    provider: Literal["openai"] = Field(default=Provider.OPENAI.value, exclude=True)
     capability: Capability = Field(default=Capability.VISION, exclude=True)
 
 
 class AnthropicCompletionClientParams(BaseClientParams):
-    provider: Provider = Field(default=Provider.ANTHROPIC, exclude=True)
+    provider: Literal["anthropic"] = Field(default=Provider.ANTHROPIC.value, exclude=True)
     capability: Capability = Field(default=Capability.COMPLETION, exclude=True)
 
 
 class GeminiCompletionClientParams(BaseClientParams):
-    provider: Provider = Field(default=Provider.GEMINI, exclude=True)
+    provider: Literal["gemini"] = Field(default=Provider.GEMINI.value, exclude=True)
     capability: Capability = Field(default=Capability.COMPLETION, exclude=True)
 
 

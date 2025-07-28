@@ -3,7 +3,7 @@
 PACKAGE_NAME := fatum
 DOCS_DIR := playbook
 TEST_DIR := tests
-SOURCES := $(PACKAGE_NAME) $(TEST_DIR)
+SOURCES := $(PACKAGE_NAME)
 
 .PHONY: .uv
 .uv:
