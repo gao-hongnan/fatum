@@ -10,7 +10,12 @@ from instructor.hooks import HookName
 from openai.types.chat import ChatCompletion
 from pydantic import BaseModel
 
-from fatum.structify.hooks import CompletionTrace, HookHandler, _setup_hooks, ahook_instructor
+from fatum.structify.hooks import (
+    CompletionTrace,
+    HookHandler,
+    _setup_hooks,  # pyright: ignore[reportPrivateUsage]
+    ahook_instructor,
+)
 
 
 class SampleModel(BaseModel):
@@ -20,7 +25,6 @@ class SampleModel(BaseModel):
 
 @pytest.mark.unit
 class TestCompletionTrace:
-
     def test_completion_trace_initialization(self) -> None:
         trace: CompletionTrace[Any] = CompletionTrace()
 
@@ -92,13 +96,12 @@ class TestCompletionTrace:
 
 @pytest.mark.unit
 class TestSetupHooks:
-
     def test_setup_hooks_returns_trace_and_hooks(self) -> None:
         mock_client = MagicMock()
         mock_client.on = MagicMock()
 
         trace: CompletionTrace[Any]
-        hooks: list[tuple[Literal["completion:kwargs", "completion:response", "completion:error", "completion:last_attempt", "parse:error"] | HookName, HookHandler]]
+        hooks: list[tuple[HookName, HookHandler]]
         trace, hooks = _setup_hooks(mock_client)
 
         assert isinstance(trace, CompletionTrace)
@@ -107,11 +110,11 @@ class TestSetupHooks:
 
         hook_names = [hook[0] for hook in hooks]
         expected_hooks = [
-            "completion:kwargs",
-            "completion:response",
-            "completion:error",
-            "completion:last_attempt",
-            "parse:error",
+            HookName.COMPLETION_KWARGS,
+            HookName.COMPLETION_RESPONSE,
+            HookName.COMPLETION_ERROR,
+            HookName.COMPLETION_LAST_ATTEMPT,
+            HookName.PARSE_ERROR,
         ]
         assert hook_names == expected_hooks
 
@@ -120,18 +123,18 @@ class TestSetupHooks:
         mock_client.on = MagicMock()
 
         trace: CompletionTrace[Any]
-        hooks: list[tuple[Literal["completion:kwargs", "completion:response", "completion:error", "completion:last_attempt", "parse:error"] | HookName, HookHandler]]
+        hooks: list[tuple[HookName, HookHandler]]
         trace, hooks = _setup_hooks(mock_client)
 
         assert mock_client.on.call_count == 5
 
         calls = mock_client.on.call_args_list
         expected_hooks = [
-            "completion:kwargs",
-            "completion:response",
-            "completion:error",
-            "completion:last_attempt",
-            "parse:error",
+            HookName.COMPLETION_KWARGS,
+            HookName.COMPLETION_RESPONSE,
+            HookName.COMPLETION_ERROR,
+            HookName.COMPLETION_LAST_ATTEMPT,
+            HookName.PARSE_ERROR,
         ]
 
         for i, expected_hook in enumerate(expected_hooks):
@@ -143,30 +146,30 @@ class TestSetupHooks:
         mock_client.on = MagicMock()
 
         trace: CompletionTrace[Any]
-        hooks: list[tuple[Literal["completion:kwargs", "completion:response", "completion:error", "completion:last_attempt", "parse:error"] | HookName, HookHandler]]
+        hooks: list[tuple[HookName, HookHandler]]
         trace, hooks = _setup_hooks(mock_client)
 
         handlers = {hook[0]: hook[1] for hook in hooks}
 
         test_kwargs = {"model": "gpt-4", "messages": [{"role": "user", "content": "test"}]}
-        handlers["completion:kwargs"](**test_kwargs)
+        handlers[HookName.COMPLETION_KWARGS](**test_kwargs)
         assert trace.completion_kwargs == test_kwargs
         assert trace.messages == test_kwargs["messages"]
 
         test_response: Any = {"id": "test_response"}
-        handlers["completion:response"](test_response)
+        handlers[HookName.COMPLETION_RESPONSE](test_response)
         assert trace.raw_response == test_response
 
         test_error = Exception("test error")
-        handlers["completion:error"](test_error)
+        handlers[HookName.COMPLETION_ERROR](test_error)
         assert trace.error == test_error
 
         test_last_error = Exception("last attempt error")
-        handlers["completion:last_attempt"](test_last_error)
+        handlers[HookName.COMPLETION_LAST_ATTEMPT](test_last_error)
         assert trace.last_attempt_error == test_last_error
 
         test_parse_error = Exception("parse error")
-        handlers["parse:error"](test_parse_error)
+        handlers[HookName.PARSE_ERROR](test_parse_error)
         assert trace.parse_error == test_parse_error
 
     def test_hook_handlers_safe_with_missing_data(self) -> None:
@@ -174,25 +177,24 @@ class TestSetupHooks:
         mock_client.on = MagicMock()
 
         trace: CompletionTrace[Any]
-        hooks: list[tuple[Literal["completion:kwargs", "completion:response", "completion:error", "completion:last_attempt", "parse:error"] | HookName, HookHandler]]
+        hooks: list[tuple[HookName, HookHandler]]
         trace, hooks = _setup_hooks(mock_client)
         handlers = {hook[0]: hook[1] for hook in hooks}
 
-        handlers["completion:kwargs"](model="gpt-4")
+        handlers[HookName.COMPLETION_KWARGS](model="gpt-4")
         assert trace.completion_kwargs == {"model": "gpt-4"}
         assert trace.messages == []
 
-        handlers["completion:response"](None)
+        handlers[HookName.COMPLETION_RESPONSE](None)
         assert trace.raw_response is None
 
-        handlers["completion:error"](None)
+        handlers[HookName.COMPLETION_ERROR](None)
         assert trace.error is None
 
 
 @pytest.mark.unit
 @pytest.mark.asyncio
 class TestAhookInstructor:
-
     async def test_ahook_instructor_disabled(self) -> None:
         mock_client = MagicMock()
 
@@ -273,10 +275,10 @@ class TestAhookInstructor:
             handlers = {call[0][0]: call[0][1] for call in registered_calls}
 
             test_kwargs = {"model": "gpt-4", "messages": [{"role": "user", "content": "test"}]}
-            handlers["completion:kwargs"](**test_kwargs)
+            handlers[HookName.COMPLETION_KWARGS](**test_kwargs)
 
             test_response = {"id": "response_123"}
-            handlers["completion:response"](test_response)
+            handlers[HookName.COMPLETION_RESPONSE](test_response)
 
             assert trace.completion_kwargs == test_kwargs
             assert trace.raw_response == test_response
@@ -309,14 +311,13 @@ class TestAhookInstructor:
 
 @pytest.mark.unit
 class TestHookIntegration:
-
     def test_hook_system_end_to_end(self) -> None:
         mock_client = MagicMock()
         mock_client.on = MagicMock()
         mock_client.off = MagicMock()
 
         trace: CompletionTrace[Any]
-        hooks: list[tuple[Literal["completion:kwargs", "completion:response", "completion:error", "completion:last_attempt", "parse:error"] | HookName, HookHandler]]
+        hooks: list[tuple[HookName, HookHandler]]
         trace, hooks = _setup_hooks(mock_client)
 
         assert trace.completion_kwargs == {}
@@ -331,10 +332,10 @@ class TestHookIntegration:
             "messages": [{"role": "user", "content": "test"}],
             "temperature": 0.7,
         }
-        handlers["completion:kwargs"](**kwargs)
+        handlers[HookName.COMPLETION_KWARGS](**kwargs)
 
         response = {"id": "chatcmpl-123", "choices": [{"message": {"content": "Hello!"}}]}
-        handlers["completion:response"](response)
+        handlers[HookName.COMPLETION_RESPONSE](response)
 
         assert trace.completion_kwargs == kwargs
         assert trace.messages == kwargs["messages"]
@@ -347,20 +348,20 @@ class TestHookIntegration:
         mock_client.on = MagicMock()
 
         trace: CompletionTrace[Any]
-        hooks: list[tuple[Literal["completion:kwargs", "completion:response", "completion:error", "completion:last_attempt", "parse:error"] | HookName, HookHandler]]
+        hooks: list[tuple[HookName, HookHandler]]
         trace, hooks = _setup_hooks(mock_client)
         handlers = {hook[0]: hook[1] for hook in hooks}
 
         completion_error = Exception("API rate limit exceeded")
-        handlers["completion:error"](completion_error)
+        handlers[HookName.COMPLETION_ERROR](completion_error)
         assert trace.error == completion_error
 
         last_attempt_error = Exception("Final attempt failed")
-        handlers["completion:last_attempt"](last_attempt_error)
+        handlers[HookName.COMPLETION_LAST_ATTEMPT](last_attempt_error)
         assert trace.last_attempt_error == last_attempt_error
 
         parse_error = Exception("Invalid JSON in response")
-        handlers["parse:error"](parse_error)
+        handlers[HookName.PARSE_ERROR](parse_error)
         assert trace.parse_error == parse_error
 
         assert trace.error == completion_error
@@ -372,25 +373,24 @@ class TestHookIntegration:
         mock_client.on = MagicMock()
 
         trace: CompletionTrace[Any]
-        hooks: list[tuple[Literal["completion:kwargs", "completion:response", "completion:error", "completion:last_attempt", "parse:error"] | HookName, HookHandler]]
+        hooks: list[tuple[HookName, HookHandler]]
         trace, hooks = _setup_hooks(mock_client)
         handlers = {hook[0]: hook[1] for hook in hooks}
 
-        handlers["completion:kwargs"]()
+        handlers[HookName.COMPLETION_KWARGS]()
         assert trace.completion_kwargs == {}
         assert trace.messages == []
 
-        handlers["completion:response"](None)
+        handlers[HookName.COMPLETION_RESPONSE](None)
         assert trace.raw_response is None
 
-        handlers["completion:kwargs"](model="gpt-3.5")
-        handlers["completion:kwargs"](model="gpt-4")
+        handlers[HookName.COMPLETION_KWARGS](model="gpt-3.5")
+        handlers[HookName.COMPLETION_KWARGS](model="gpt-4")
         assert trace.completion_kwargs == {"model": "gpt-4"}
 
 
 @pytest.mark.unit
 class TestHookTypesSafety:
-
     def test_completion_trace_type_parameters(self) -> None:
         openai_trace: CompletionTrace[ChatCompletion] = CompletionTrace()
         anthropic_trace: CompletionTrace[AnthropicResponse] = CompletionTrace()
@@ -401,16 +401,17 @@ class TestHookTypesSafety:
         assert isinstance(gemini_trace, CompletionTrace)
 
     def test_hook_names_type_safety(self) -> None:
-        valid_names: list[Literal["completion:kwargs", "completion:response", "completion:error", "completion:last_attempt", "parse:error"]] = [
-            "completion:kwargs",
-            "completion:response",
-            "completion:error",
-            "completion:last_attempt",
-            "parse:error",
+        valid_names: list[HookName] = [
+            HookName.COMPLETION_KWARGS,
+            HookName.COMPLETION_RESPONSE,
+            HookName.COMPLETION_ERROR,
+            HookName.COMPLETION_LAST_ATTEMPT,
+            HookName.PARSE_ERROR,
         ]
 
         for name in valid_names:
-            assert isinstance(name, str)
+            assert isinstance(name, HookName)
+            assert isinstance(name.value, str)  # The enum value is a string
 
     def test_message_param_type_alias(self) -> None:
         valid_message: dict[str, Any] = {"role": "user", "content": "test"}

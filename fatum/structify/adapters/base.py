@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import threading
 from abc import ABC, abstractmethod
 from typing import TYPE_CHECKING, Any, AsyncIterator, Generic, Literal, overload
 
@@ -28,17 +29,23 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
         self.instructor_config = instructor_config
         self._client: ClientT | None = None
         self._instructor: AsyncInstructor | None = None
+        self._client_lock = threading.Lock()
+        self._instructor_lock = threading.Lock()
 
     @property
     def client(self) -> ClientT:
         if self._client is None:
-            self._client = self._create_client()
+            with self._client_lock:
+                if self._client is None:
+                    self._client = self._create_client()
         return self._client
 
     @property
     def instructor(self) -> AsyncInstructor:
         if self._instructor is None:
-            self._instructor = self._with_instructor()
+            with self._instructor_lock:
+                if self._instructor is None:
+                    self._instructor = self._with_instructor()
         return self._instructor
 
     @abstractmethod

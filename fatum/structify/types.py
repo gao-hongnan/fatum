@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from enum import StrEnum
-from typing import TYPE_CHECKING, Any, Literal, TypeAlias, TypeVar
+from typing import TYPE_CHECKING, Any, TypeAlias, TypeVar
 
 from pydantic import BaseModel
 
@@ -21,13 +21,6 @@ ClientT = TypeVar("ClientT")
 CompletionClientParamsT = TypeVar("CompletionClientParamsT", bound="CompletionClientParams")
 ResponseT = TypeVar("ResponseT", bound="ChatCompletion | AnthropicResponse | GenerateContentResponse")
 MessageParam: TypeAlias = dict[str, Any]
-HookNameStr: TypeAlias = Literal[
-    "completion:kwargs",
-    "completion:response",
-    "completion:error",
-    "completion:last_attempt",
-    "parse:error",
-]
 
 
 class Provider(StrEnum):

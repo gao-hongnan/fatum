@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING, overload
+from typing import TYPE_CHECKING, assert_never, overload
 
 from fatum.structify.adapters.anthropic import AnthropicAdapter
 from fatum.structify.adapters.gemini import GeminiAdapter
@@ -80,3 +80,5 @@ class AdapterFactory:
                     completion_params=completion_params,
                     instructor_config=instructor_config,
                 )
+            case _:  # pyright: ignore[reportUnnecessaryComparison]
+                assert_never(provider_config)

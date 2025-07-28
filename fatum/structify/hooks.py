@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-from fatum.structify.types import HookNameStr, MessageParam, ResponseT
+from fatum.structify.types import MessageParam, ResponseT
 
 
 class HookHandler(Protocol):
@@ -33,7 +33,7 @@ class CompletionTrace(BaseModel, Generic[ResponseT]):
 
 def _setup_hooks(
     client: instructor.AsyncInstructor,
-) -> tuple[CompletionTrace[ResponseT], list[tuple[HookNameStr | HookName, HookHandler]]]:
+) -> tuple[CompletionTrace[ResponseT], list[tuple[HookName, HookHandler]]]:
     captured: CompletionTrace[ResponseT] = CompletionTrace()
 
     def capture_kwargs(*_: Any, **kwargs: Any) -> None:
@@ -59,12 +59,12 @@ def _setup_hooks(
     def capture_parse_error(error: Exception) -> None:
         captured.parse_error = error
 
-    hooks: list[tuple[HookNameStr | HookName, HookHandler]] = [
-        ("completion:kwargs", capture_kwargs),
-        ("completion:response", capture_response_data),
-        ("completion:error", capture_error),
-        ("completion:last_attempt", capture_last_attempt),
-        ("parse:error", capture_parse_error),
+    hooks: list[tuple[HookName, HookHandler]] = [
+        (HookName.COMPLETION_KWARGS, capture_kwargs),
+        (HookName.COMPLETION_RESPONSE, capture_response_data),
+        (HookName.COMPLETION_ERROR, capture_error),
+        (HookName.COMPLETION_LAST_ATTEMPT, capture_last_attempt),
+        (HookName.PARSE_ERROR, capture_parse_error),
     ]
 
     for hook_name, handler in hooks:
