@@ -1,7 +1,31 @@
+"""
+Structify Adapter Pattern Demo - Movie Review CLI
+
+```bash
+uv run playground/structify/01_demo.py --provider all
+
+uv run playground/structify/01_demo.py --provider openai
+uv run playground/structify/01_demo.py --provider anthropic
+uv run playground/structify/01_demo.py --provider gemini
+
+uv run playground/structify/01_demo.py --movie "The Matrix"
+uv run playground/structify/01_demo.py --provider anthropic --movie "Blade Runner"
+
+uv run playground/structify/01_demo.py --stream
+uv run playground/structify/01_demo.py --provider openai --stream
+uv run playground/structify/01_demo.py --provider gemini --movie "Dune" --stream
+
+uv run playground/structify/01_demo.py --trace --provider all
+uv run playground/structify/01_demo.py --provider anthropic --trace
+uv run playground/structify/01_demo.py --provider openai --movie "Interstellar" --stream --trace
+```
+"""
+
 from __future__ import annotations
 
 import argparse
 import asyncio
+from pprint import pprint
 from typing import Any
 
 import instructor
@@ -177,6 +201,7 @@ async def review_movie(
                 response_model=MovieReview,
                 with_hooks=True,
             )
+            pprint(type(result.trace.raw_response))
             review = result.data
             display_trace_info(result)
         else:

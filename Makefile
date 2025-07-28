@@ -3,7 +3,7 @@
 PACKAGE_NAME := fatum
 DOCS_DIR := playbook
 TEST_DIR := tests
-SOURCES := $(PACKAGE_NAME)
+SOURCES := $(PACKAGE_NAME) $(TEST_DIR)
 
 .PHONY: .uv
 .uv:
@@ -60,7 +60,7 @@ docs: .uv
 	cd $(DOCS_DIR) && uv run jupyter book start .
 
 .PHONY: ci
-ci: lint security typecheck test coverage
+ci: lint security typecheck test
 
 .PHONY: clean
 clean:

@@ -74,14 +74,19 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
         with_hooks: bool = False,
         **kwargs: Any,
     ) -> BaseModelT | CompletionResult[BaseModelT, ResponseT]:
+        if not messages:
+            raise ValueError("Messages list cannot be empty")
+
         captured: CompletionTrace[ResponseT]
+        # NOTE: Merge completion params with kwargs, letting kwargs override
+        completion_kwargs = {**self.completion_params.model_dump(), **kwargs}
+
         async with ahook_instructor(self.instructor, enable=with_hooks) as captured:
             response = await self.instructor.create(
                 response_model=response_model,
                 messages=messages,
                 **self.instructor_config.model_dump(exclude={"mode"}),
-                **self.completion_params.model_dump(),
-                **kwargs,
+                **completion_kwargs,
             )
             return self._assemble(response, captured, with_hooks)
 
@@ -108,22 +113,29 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
         messages: list[ChatCompletionMessageParam],
         response_model: type[BaseModelT],
         with_hooks: bool = False,
+        **kwargs: Any,
     ) -> AsyncIterator[BaseModelT | CompletionResult[BaseModelT, ResponseT]]:
-        return self._astream(messages, response_model, with_hooks)
+        return self._astream(messages, response_model, with_hooks, **kwargs)
 
     async def _astream(
         self,
         messages: list[ChatCompletionMessageParam],
         response_model: type[BaseModelT],
         with_hooks: bool = False,
+        **kwargs: Any,
     ) -> AsyncIterator[BaseModelT | CompletionResult[BaseModelT, ResponseT]]:
+        if not messages:
+            raise ValueError("Messages list cannot be empty")
+
         captured: CompletionTrace[ResponseT]
+        completion_kwargs = {**self.completion_params.model_dump(), **kwargs}
+
         async with ahook_instructor(self.instructor, enable=with_hooks) as captured:
             async for partial in self.instructor.create_partial(
                 response_model=response_model,
                 messages=messages,
                 **self.instructor_config.model_dump(exclude={"mode"}),
-                **self.completion_params.model_dump(),
+                **completion_kwargs,
             ):
                 yield self._assemble(partial, captured, with_hooks)
 

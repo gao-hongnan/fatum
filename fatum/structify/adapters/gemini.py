@@ -9,12 +9,11 @@ from openai.types.chat import ChatCompletionMessageParam
 
 from fatum.structify.adapters.base import BaseAdapter
 from fatum.structify.config import GeminiProviderConfig
-from fatum.structify.hooks import ahook_instructor
+from fatum.structify.hooks import CompletionTrace, ahook_instructor
 from fatum.structify.types import BaseModelT
 
 if TYPE_CHECKING:
     from fatum.structify.config import CompletionResult
-    from fatum.structify.hooks import CompletionTrace
 
 
 class GeminiAdapter(BaseAdapter[GeminiProviderConfig, genai.Client, GenerateContentResponse]):
@@ -58,8 +57,8 @@ class GeminiAdapter(BaseAdapter[GeminiProviderConfig, genai.Client, GenerateCont
     ) -> BaseModelT | CompletionResult[BaseModelT, GenerateContentResponse]:
         model = self.completion_params.model
         config = GenerateContentConfig(**self.completion_params.model_dump(exclude={"model"}))
-        captured: CompletionTrace[GenerateContentResponse]
 
+        captured: CompletionTrace[GenerateContentResponse]
         async with ahook_instructor(self.instructor, enable=with_hooks) as captured:
             response = await self.instructor.create(
                 model=model,
@@ -76,6 +75,7 @@ class GeminiAdapter(BaseAdapter[GeminiProviderConfig, genai.Client, GenerateCont
         messages: list[ChatCompletionMessageParam],
         response_model: type[BaseModelT],
         with_hooks: bool = False,
+        **kwargs: Any,
     ) -> AsyncIterator[BaseModelT | CompletionResult[BaseModelT, GenerateContentResponse]]:
         model = self.completion_params.model
         config = GenerateContentConfig(**self.completion_params.model_dump(exclude={"model"}))
@@ -88,5 +88,6 @@ class GeminiAdapter(BaseAdapter[GeminiProviderConfig, genai.Client, GenerateCont
                 messages=messages,
                 **self.instructor_config.model_dump(exclude={"mode"}),
                 config=config,
+                **kwargs,
             ):
                 yield self._assemble(partial, captured, with_hooks)

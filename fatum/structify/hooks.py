@@ -1,25 +1,22 @@
 from __future__ import annotations
 
 from contextlib import asynccontextmanager
-from typing import TYPE_CHECKING, Any, Generic, Literal, TypeAlias, cast
+from typing import TYPE_CHECKING, Any, Generic, Protocol
 
 import instructor
 from instructor.hooks import HookName
 from pydantic import BaseModel, ConfigDict, Field
 
-from fatum.structify.types import ResponseT
-
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-MessageParam: TypeAlias = dict[str, Any]
-HookNameStr: TypeAlias = Literal[
-    "completion:kwargs",
-    "completion:response",
-    "completion:error",
-    "completion:last_attempt",
-    "parse:error",
-]
+from fatum.structify.types import HookNameStr, MessageParam, ResponseT
+
+
+class HookHandler(Protocol):
+    """Protocol for hook handler functions."""
+
+    def __call__(self, *args: Any, **kwargs: Any) -> None: ...
 
 
 class CompletionTrace(BaseModel, Generic[ResponseT]):
@@ -36,14 +33,21 @@ class CompletionTrace(BaseModel, Generic[ResponseT]):
 
 def _setup_hooks(
     client: instructor.AsyncInstructor,
-) -> tuple[CompletionTrace[ResponseT], list[tuple[HookNameStr | HookName, Any]]]:
+) -> tuple[CompletionTrace[ResponseT], list[tuple[HookNameStr | HookName, HookHandler]]]:
     captured: CompletionTrace[ResponseT] = CompletionTrace()
 
     def capture_kwargs(*_: Any, **kwargs: Any) -> None:
         captured.completion_kwargs = kwargs
-        captured.messages = kwargs.get("messages", [])
+        # NOTE: openai and anthropic uses `messages` and gemini uses `contents`
+        messages = kwargs.get("messages", kwargs.get("contents", []))
 
-    def capture_response_data(response: Any) -> None:
+        # NOTE: Gemini Content objects are not serializable, so we convert them to dicts what......?
+        if messages and hasattr(messages[0], "model_dump"):
+            messages = [msg.model_dump() if hasattr(msg, "model_dump") else msg for msg in messages]
+
+        captured.messages = messages
+
+    def capture_response_data(response: ResponseT) -> None:
         captured.raw_response = response
 
     def capture_error(error: Exception) -> None:
@@ -55,7 +59,7 @@ def _setup_hooks(
     def capture_parse_error(error: Exception) -> None:
         captured.parse_error = error
 
-    hooks: list[tuple[HookNameStr | HookName, Any]] = [
+    hooks: list[tuple[HookNameStr | HookName, HookHandler]] = [
         ("completion:kwargs", capture_kwargs),
         ("completion:response", capture_response_data),
         ("completion:error", capture_error),
@@ -69,7 +73,7 @@ def _setup_hooks(
     return captured, hooks
 
 
-@asynccontextmanager  # type: ignore[arg-type]
+@asynccontextmanager
 async def ahook_instructor(
     client: instructor.AsyncInstructor,
     enable: bool = True,
@@ -138,19 +142,20 @@ async def ahook_instructor(
     and unregistered correctly in an async context.
     """
     if not enable:
-        captured = CompletionTrace()
-        yield cast(CompletionTrace[ResponseT], captured)
+        captured: CompletionTrace[ResponseT] = CompletionTrace()
+        yield captured
         return
 
     captured, hooks = _setup_hooks(client)
 
     try:
-        yield cast(CompletionTrace[ResponseT], captured)
+        yield captured
     finally:
         for hook_name, handler in hooks:
             client.off(hook_name, handler)
 
 
+# NOTE: Import response types for model rebuild - these are needed at runtime when CompletionTrace.model_rebuild() is called!
 from anthropic.types import Message as AnthropicResponse  # noqa: E402, F401 # type: ignore
 from google.genai.types import GenerateContentResponse  # noqa: E402, F401 # type: ignore
 from openai.types.chat import ChatCompletion  # noqa: E402, F401 # type: ignore
