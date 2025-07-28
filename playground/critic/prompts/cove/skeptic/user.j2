@@ -1,0 +1,6 @@
+Question: {{ question }}
+
+Proposed Answer: {{ draft_reasoning }}
+Claim: {{ "This answer appears to be correct" if draft_is_aligned else "This answer may have issues" }}.
+
+Generate verification questions that could reveal factual errors or inaccuracies in this answer.

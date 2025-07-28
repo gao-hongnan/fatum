@@ -1,0 +1,12 @@
+Original Question: {{ question }}
+
+Initial Draft Answer: {{ draft_reasoning }}
+Initial Assessment: {{ "This answer appears correct" if draft_is_aligned else "This answer may have issues" }}.
+
+Verification Questions and Answers:
+{% for q, a in qa_pairs %}
+Q: {{ q }}
+A: {{ a.answer }}: {{ a.brief_explanation }}
+{% endfor %}
+
+Based on the verification evidence, provide your final answer with reasoning, confidence level (0.0-1.0), and indicate if you're revising the initial assessment.

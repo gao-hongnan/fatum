@@ -1,0 +1,104 @@
+x-openai-provider-config: &openai-provider-config
+  provider: openai
+  max_retries: 3
+
+x-openai-completion-params: &openai-completion-params
+  provider: openai
+  model: gpt-4o-mini
+  temperature: 0.0
+
+x-instructor-config-openai: &instructor-config-openai
+  mode: tool_call
+
+x-anthropic-provider-config: &anthropic-provider-config
+  provider: anthropic
+  max_retries: 3
+
+x-anthropic-completion-params: &anthropic-completion-params
+  provider: anthropic
+  model: claude-3-sonnet-20240229
+  temperature: 0.0
+  max_tokens: 2000
+
+x-instructor-config-anthropic: &instructor-config-anthropic
+  mode: anthropic_tools
+
+x-gemini-provider-config: &gemini-provider-config
+  provider: gemini
+
+x-gemini-completion-params: &gemini-completion-params
+  provider: gemini
+  model: gemini-2.5-flash
+  temperature: 0.0
+  max_output_tokens: 2000
+
+x-instructor-config-gemini: &instructor-config-gemini
+  mode: genai_structured_outputs
+
+cove:
+  drafter:
+    prompts:
+      base_path: "critic/prompts"
+      user_prompt_path: "cove/drafter/user.j2"
+      user_context_variables:
+        question: ""
+      system_prompt_path: "cove/drafter/system.j2"
+      system_context_variables: {}
+    provider_config:
+      <<: *gemini-provider-config
+    completion_params:
+      <<: *gemini-completion-params
+      model: gemini-2.5-flash
+      max_output_tokens: 2000
+    instructor_config:
+      <<: *instructor-config-gemini
+  skeptic:
+    prompts:
+      base_path: "critic/prompts"
+      user_prompt_path: "cove/skeptic/user.j2"
+      user_context_variables:
+        question: ""
+        draft_reasoning: ""
+        draft_is_aligned: false
+      system_prompt_path: "cove/skeptic/system.j2"
+      system_context_variables: {}
+    provider_config:
+      <<: *openai-provider-config
+    completion_params:
+      <<: *openai-completion-params
+      max_tokens: 3000
+    instructor_config:
+      <<: *instructor-config-openai
+  fact_checker:
+    prompts:
+      base_path: "critic/prompts"
+      user_prompt_path: "cove/fact_checker/user.j2"
+      user_context_variables:
+        question: ""
+      system_prompt_path: "cove/fact_checker/system.j2"
+      system_context_variables: {}
+    provider_config:
+      <<: *openai-provider-config
+    completion_params:
+      <<: *openai-completion-params
+      max_tokens: 2000
+    instructor_config:
+      <<: *instructor-config-openai
+  judge:
+    prompts:
+      base_path: "critic/prompts"
+      user_prompt_path: "cove/judge/user.j2"
+      user_context_variables:
+        question: ""
+        draft_reasoning: ""
+        draft_is_aligned: false
+        qa_pairs: []
+      system_prompt_path: "cove/judge/system.j2"
+      system_context_variables: {}
+    provider_config:
+      <<: *openai-provider-config
+    completion_params:
+      <<: *openai-completion-params
+      max_tokens: 2000
+    instructor_config:
+      <<: *instructor-config-openai
