@@ -10,7 +10,6 @@ from fatum.structify.types import (
     BaseProviderConfigT,
     Capability,
     ClientT,
-    CompletionClientParamsT,
     Provider,
     ResponseT,
 )
@@ -26,7 +25,6 @@ class SampleModel(BaseModel):
 
 @pytest.mark.unit
 class TestProviderEnum:
-
     def test_provider_enum_values(self) -> None:
         assert str(Provider.OPENAI) == "openai"
         assert str(Provider.ANTHROPIC) == "anthropic"
@@ -85,7 +83,6 @@ class TestProviderEnum:
 
 @pytest.mark.unit
 class TestCapabilityEnum:
-
     def test_capability_enum_values(self) -> None:
         assert str(Capability.COMPLETION) == "completion"
         assert str(Capability.EMBEDDING) == "embedding"
@@ -144,7 +141,6 @@ class TestCapabilityEnum:
 
 @pytest.mark.unit
 class TestTypeVars:
-
     def test_base_model_t(self) -> None:
         assert BaseModelT.__bound__ is BaseModel
         assert BaseModelT.__name__ == "BaseModelT"
@@ -158,9 +154,6 @@ class TestTypeVars:
             assert ClientT.__bound__ is None
         if hasattr(ClientT, "__constraints__"):
             assert not ClientT.__constraints__
-
-    def test_completion_client_params_t(self) -> None:
-        assert CompletionClientParamsT.__name__ == "CompletionClientParamsT"
 
     def test_response_t(self) -> None:
         assert ResponseT.__name__ == "ResponseT"
@@ -178,7 +171,6 @@ class TestTypeVars:
 
 @pytest.mark.unit
 class TestTypeDefinitions:
-
     def test_type_checking_imports(self) -> None:
         from fatum.structify import types
 
@@ -190,10 +182,9 @@ class TestTypeDefinitions:
         assert ResponseT.__name__ == "ResponseT"
 
     def test_forward_references(self) -> None:
-        from fatum.structify.types import BaseProviderConfigT, CompletionClientParamsT
+        from fatum.structify.types import BaseProviderConfigT
 
         assert isinstance(BaseProviderConfigT, type(BaseModelT))
-        assert isinstance(CompletionClientParamsT, type(BaseModelT))
 
     def test_module_level_exports(self) -> None:
         from fatum.structify import types
@@ -202,7 +193,6 @@ class TestTypeDefinitions:
             "BaseModelT",
             "BaseProviderConfigT",
             "ClientT",
-            "CompletionClientParamsT",
             "ResponseT",
             "Provider",
             "Capability",
@@ -223,7 +213,6 @@ class TestTypeDefinitions:
 
 @pytest.mark.unit
 class TestTypeAnnotations:
-
     def test_provider_annotations(self) -> None:
         assert hasattr(Provider, "__annotations__") or Provider.__class__.__annotations__
 
@@ -236,13 +225,11 @@ class TestTypeAnnotations:
         assert isinstance(BaseModelT, TypeVar)
         assert isinstance(BaseProviderConfigT, TypeVar)
         assert isinstance(ClientT, TypeVar)
-        assert isinstance(CompletionClientParamsT, TypeVar)
         assert isinstance(ResponseT, TypeVar)
 
 
 @pytest.mark.unit
 class TestEnumExtensibility:
-
     def test_provider_extensibility(self) -> None:
         current_providers = {Provider.OPENAI, Provider.ANTHROPIC, Provider.GEMINI}
         assert len(current_providers) == 3
@@ -286,7 +273,6 @@ class TestEnumExtensibility:
 
 @pytest.mark.unit
 class TestTypeCompatibility:
-
     def test_provider_string_compatibility(self) -> None:
         provider = Provider.OPENAI
 

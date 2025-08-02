@@ -25,9 +25,7 @@ from fatum.structify.types import Capability, Provider
 
 @pytest.mark.unit
 class TestAllowable:
-
     def test_allowable_extra_allow(self) -> None:
-
         class TestModel(Allowable):
             name: str
 
@@ -37,7 +35,6 @@ class TestAllowable:
         assert instance.extra_field == "extra_value"
 
     def test_allowable_serialization(self) -> None:
-
         class TestModel(Allowable):
             name: str
 
@@ -49,7 +46,6 @@ class TestAllowable:
 
 @pytest.mark.unit
 class TestProviderConfigs:
-
     def test_openai_provider_config(self) -> None:
         config = OpenAIProviderConfig(api_key="test_key")
 
@@ -94,7 +90,6 @@ class TestProviderConfigs:
 
 @pytest.mark.unit
 class TestClientParams:
-
     def test_openai_completion_client_params(self) -> None:
         params = OpenAICompletionClientParams(model="gpt-4")
 
@@ -145,7 +140,6 @@ class TestClientParams:
 
 @pytest.mark.unit
 class TestDiscriminatedUnions:
-
     def test_provider_config_union_openai(self) -> None:
         config_data = {"api_key": "test_key"}
 
@@ -249,7 +243,6 @@ class TestDiscriminatedUnions:
 
 @pytest.mark.unit
 class TestInstructorConfig:
-
     def test_instructor_config_creation(self) -> None:
         modes = [
             instructor.Mode.TOOLS,
@@ -280,9 +273,7 @@ class TestInstructorConfig:
 
 @pytest.mark.unit
 class TestCompletionResult:
-
     def test_completion_result_creation(self) -> None:
-
         class TestModel(BaseModel):
             name: str
             value: int
@@ -298,7 +289,6 @@ class TestCompletionResult:
         assert isinstance(result.trace, CompletionTrace)
 
     def test_completion_result_generic_typing(self) -> None:
-
         class TestModel(BaseModel):
             name: str
 
@@ -311,7 +301,6 @@ class TestCompletionResult:
         assert result.data.name == "test"
 
     def test_completion_result_arbitrary_types(self) -> None:
-
         class TestModel(BaseModel):
             name: str
 
@@ -324,7 +313,6 @@ class TestCompletionResult:
 
 @pytest.mark.unit
 class TestConfigSerialization:
-
     def test_provider_config_round_trip(self) -> None:
         original = OpenAIProviderConfig(
             api_key="test_key",
@@ -368,7 +356,6 @@ class TestConfigSerialization:
 
 @pytest.mark.unit
 class TestConfigValidation:
-
     def test_empty_api_key_validation(self) -> None:
         config = OpenAIProviderConfig(api_key="")
         assert config.api_key == ""

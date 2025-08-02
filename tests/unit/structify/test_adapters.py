@@ -34,7 +34,6 @@ class SampleModel(BaseModel):
 
 @pytest.mark.unit
 class TestBaseAdapter:
-
     def test_base_adapter_initialization(self) -> None:
         provider_config = OpenAIProviderConfig(api_key="test_key")
         completion_params = OpenAICompletionClientParams(model="gpt-4")
@@ -99,7 +98,6 @@ class TestBaseAdapter:
 
 @pytest.mark.unit
 class TestOpenAIAdapter:
-
     def test_create_client(self) -> None:
         provider_config = OpenAIProviderConfig(
             api_key="test_key",
@@ -264,7 +262,6 @@ class TestOpenAIAdapter:
 
 @pytest.mark.unit
 class TestAnthropicAdapter:
-
     def test_create_client(self) -> None:
         provider_config = AnthropicProviderConfig(
             api_key="test_key",
@@ -317,7 +314,6 @@ class TestAnthropicAdapter:
 
 @pytest.mark.unit
 class TestGeminiAdapter:
-
     def test_create_client(self) -> None:
         provider_config = GeminiProviderConfig(api_key="test_key")
         completion_params = GeminiCompletionClientParams(model="gemini-pro")
@@ -412,7 +408,6 @@ class TestGeminiAdapter:
 
 @pytest.mark.unit
 class TestAdapterErrorHandling:
-
     @pytest.mark.asyncio
     async def test_adapter_handles_instructor_errors(self) -> None:
         provider_config = OpenAIProviderConfig(api_key="test_key")
@@ -471,7 +466,6 @@ class TestAdapterErrorHandling:
 
 @pytest.mark.unit
 class TestAdapterTypeConsistency:
-
     def test_all_adapters_inherit_from_base(self) -> None:
         assert issubclass(OpenAIAdapter, BaseAdapter)
         assert issubclass(AnthropicAdapter, BaseAdapter)
