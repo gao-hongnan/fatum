@@ -13,8 +13,8 @@ from pydantic import BaseModel
 from fatum.structify.hooks import (
     CompletionTrace,
     HookHandler,
+    _setup_hooks,
     ahook_instructor,
-    setup_hooks,
 )
 
 
@@ -102,7 +102,7 @@ class TestSetupHooks:
 
         trace: CompletionTrace[Any]
         hooks: list[tuple[HookName, HookHandler]]
-        trace, hooks = setup_hooks(mock_client)
+        trace, hooks = _setup_hooks(mock_client)
 
         assert isinstance(trace, CompletionTrace)
         assert isinstance(hooks, list)
@@ -124,7 +124,7 @@ class TestSetupHooks:
 
         trace: CompletionTrace[Any]
         hooks: list[tuple[HookName, HookHandler]]
-        trace, hooks = setup_hooks(mock_client)
+        trace, hooks = _setup_hooks(mock_client)
 
         assert mock_client.on.call_count == 5
 
@@ -147,7 +147,7 @@ class TestSetupHooks:
 
         trace: CompletionTrace[Any]
         hooks: list[tuple[HookName, HookHandler]]
-        trace, hooks = setup_hooks(mock_client)
+        trace, hooks = _setup_hooks(mock_client)
 
         handlers = {hook[0]: hook[1] for hook in hooks}
 
@@ -178,7 +178,7 @@ class TestSetupHooks:
 
         trace: CompletionTrace[Any]
         hooks: list[tuple[HookName, HookHandler]]
-        trace, hooks = setup_hooks(mock_client)
+        trace, hooks = _setup_hooks(mock_client)
         handlers = {hook[0]: hook[1] for hook in hooks}
 
         handlers[HookName.COMPLETION_KWARGS](model="gpt-4")
@@ -318,7 +318,7 @@ class TestHookIntegration:
 
         trace: CompletionTrace[Any]
         hooks: list[tuple[HookName, HookHandler]]
-        trace, hooks = setup_hooks(mock_client)
+        trace, hooks = _setup_hooks(mock_client)
 
         assert trace.completion_kwargs == {}
         assert trace.messages == []
@@ -349,7 +349,7 @@ class TestHookIntegration:
 
         trace: CompletionTrace[Any]
         hooks: list[tuple[HookName, HookHandler]]
-        trace, hooks = setup_hooks(mock_client)
+        trace, hooks = _setup_hooks(mock_client)
         handlers = {hook[0]: hook[1] for hook in hooks}
 
         completion_error = Exception("API rate limit exceeded")
@@ -374,7 +374,7 @@ class TestHookIntegration:
 
         trace: CompletionTrace[Any]
         hooks: list[tuple[HookName, HookHandler]]
-        trace, hooks = setup_hooks(mock_client)
+        trace, hooks = _setup_hooks(mock_client)
         handlers = {hook[0]: hook[1] for hook in hooks}
 
         handlers[HookName.COMPLETION_KWARGS]()
