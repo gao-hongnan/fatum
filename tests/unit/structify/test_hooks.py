@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from typing import Any, Literal
+from typing import Any
 from unittest.mock import MagicMock
 
 import pytest
@@ -13,8 +13,8 @@ from pydantic import BaseModel
 from fatum.structify.hooks import (
     CompletionTrace,
     HookHandler,
-    _setup_hooks,  # pyright: ignore[reportPrivateUsage]
     ahook_instructor,
+    setup_hooks,
 )
 
 
@@ -96,13 +96,13 @@ class TestCompletionTrace:
 
 @pytest.mark.unit
 class TestSetupHooks:
-    def test_setup_hooks_returns_trace_and_hooks(self) -> None:
+    def testsetup_hooks_returns_trace_and_hooks(self) -> None:
         mock_client = MagicMock()
         mock_client.on = MagicMock()
 
         trace: CompletionTrace[Any]
         hooks: list[tuple[HookName, HookHandler]]
-        trace, hooks = _setup_hooks(mock_client)
+        trace, hooks = setup_hooks(mock_client)
 
         assert isinstance(trace, CompletionTrace)
         assert isinstance(hooks, list)
@@ -118,13 +118,13 @@ class TestSetupHooks:
         ]
         assert hook_names == expected_hooks
 
-    def test_setup_hooks_registers_handlers(self) -> None:
+    def testsetup_hooks_registers_handlers(self) -> None:
         mock_client = MagicMock()
         mock_client.on = MagicMock()
 
         trace: CompletionTrace[Any]
         hooks: list[tuple[HookName, HookHandler]]
-        trace, hooks = _setup_hooks(mock_client)
+        trace, hooks = setup_hooks(mock_client)
 
         assert mock_client.on.call_count == 5
 
@@ -147,7 +147,7 @@ class TestSetupHooks:
 
         trace: CompletionTrace[Any]
         hooks: list[tuple[HookName, HookHandler]]
-        trace, hooks = _setup_hooks(mock_client)
+        trace, hooks = setup_hooks(mock_client)
 
         handlers = {hook[0]: hook[1] for hook in hooks}
 
@@ -178,7 +178,7 @@ class TestSetupHooks:
 
         trace: CompletionTrace[Any]
         hooks: list[tuple[HookName, HookHandler]]
-        trace, hooks = _setup_hooks(mock_client)
+        trace, hooks = setup_hooks(mock_client)
         handlers = {hook[0]: hook[1] for hook in hooks}
 
         handlers[HookName.COMPLETION_KWARGS](model="gpt-4")
@@ -318,7 +318,7 @@ class TestHookIntegration:
 
         trace: CompletionTrace[Any]
         hooks: list[tuple[HookName, HookHandler]]
-        trace, hooks = _setup_hooks(mock_client)
+        trace, hooks = setup_hooks(mock_client)
 
         assert trace.completion_kwargs == {}
         assert trace.messages == []
@@ -349,7 +349,7 @@ class TestHookIntegration:
 
         trace: CompletionTrace[Any]
         hooks: list[tuple[HookName, HookHandler]]
-        trace, hooks = _setup_hooks(mock_client)
+        trace, hooks = setup_hooks(mock_client)
         handlers = {hook[0]: hook[1] for hook in hooks}
 
         completion_error = Exception("API rate limit exceeded")
@@ -374,7 +374,7 @@ class TestHookIntegration:
 
         trace: CompletionTrace[Any]
         hooks: list[tuple[HookName, HookHandler]]
-        trace, hooks = _setup_hooks(mock_client)
+        trace, hooks = setup_hooks(mock_client)
         handlers = {hook[0]: hook[1] for hook in hooks}
 
         handlers[HookName.COMPLETION_KWARGS]()
@@ -411,7 +411,7 @@ class TestHookTypesSafety:
 
         for name in valid_names:
             assert isinstance(name, HookName)
-            assert isinstance(name.value, str)  # The enum value is a string
+            assert isinstance(name.value, str)
 
     def test_message_param_type_alias(self) -> None:
         valid_message: dict[str, Any] = {"role": "user", "content": "test"}

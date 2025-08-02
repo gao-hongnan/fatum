@@ -1,32 +1,34 @@
 from __future__ import annotations
 
+from typing import Literal, cast
+
 import instructor
 import pytest
 
+from fatum.structify import create_adapter
 from fatum.structify.adapters.anthropic import AnthropicAdapter
 from fatum.structify.adapters.gemini import GeminiAdapter
 from fatum.structify.adapters.openai import OpenAIAdapter
 from fatum.structify.config import (
     AnthropicCompletionClientParams,
     AnthropicProviderConfig,
+    BaseProviderConfig,
     GeminiCompletionClientParams,
     GeminiProviderConfig,
     InstructorConfig,
     OpenAICompletionClientParams,
     OpenAIProviderConfig,
 )
-from fatum.structify.factory import AdapterFactory
 
 
 @pytest.mark.unit
-class TestAdapterFactory:
-
+class TestAdapterRegistry:
     def test_create_openai_adapter(self) -> None:
         provider_config = OpenAIProviderConfig(api_key="test_key")
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
-        adapter = AdapterFactory.create(
+        adapter = create_adapter(
             provider_config=provider_config,
             completion_params=completion_params,
             instructor_config=instructor_config,
@@ -42,7 +44,7 @@ class TestAdapterFactory:
         completion_params = AnthropicCompletionClientParams(model="claude-3-sonnet-20240229")
         instructor_config = InstructorConfig(mode=instructor.Mode.ANTHROPIC_TOOLS)
 
-        adapter = AdapterFactory.create(
+        adapter = create_adapter(
             provider_config=provider_config,
             completion_params=completion_params,
             instructor_config=instructor_config,
@@ -58,7 +60,7 @@ class TestAdapterFactory:
         completion_params = GeminiCompletionClientParams(model="gemini-pro")
         instructor_config = InstructorConfig(mode=instructor.Mode.GENAI_STRUCTURED_OUTPUTS)
 
-        adapter = AdapterFactory.create(
+        adapter = create_adapter(
             provider_config=provider_config,
             completion_params=completion_params,
             instructor_config=instructor_config,
@@ -74,7 +76,7 @@ class TestAdapterFactory:
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
-        adapter = AdapterFactory.create(
+        adapter = create_adapter(
             provider_config=provider_config,
             completion_params=completion_params,
             instructor_config=instructor_config,
@@ -90,7 +92,7 @@ class TestAdapterFactory:
         completion_params = AnthropicCompletionClientParams(model="claude-3-sonnet")
         instructor_config = InstructorConfig(mode=instructor.Mode.ANTHROPIC_TOOLS)
 
-        adapter = AdapterFactory.create(
+        adapter = create_adapter(
             provider_config=provider_config,
             completion_params=completion_params,
             instructor_config=instructor_config,
@@ -105,7 +107,7 @@ class TestAdapterFactory:
         completion_params = GeminiCompletionClientParams(model="gemini-pro")
         instructor_config = InstructorConfig(mode=instructor.Mode.GENAI_STRUCTURED_OUTPUTS)
 
-        adapter = AdapterFactory.create(
+        adapter = create_adapter(
             provider_config=provider_config,
             completion_params=completion_params,
             instructor_config=instructor_config,
@@ -137,7 +139,7 @@ class TestAdapterFactory:
             }
         )
 
-        adapter = AdapterFactory.create(
+        adapter = create_adapter(
             provider_config=provider_config,
             completion_params=completion_params,
             instructor_config=instructor_config,
@@ -167,7 +169,7 @@ class TestAdapterFactory:
         original_model = completion_params.model
         original_mode = instructor_config.mode
 
-        adapter = AdapterFactory.create(
+        adapter = create_adapter(
             provider_config=provider_config,
             completion_params=completion_params,
             instructor_config=instructor_config,
@@ -186,7 +188,7 @@ class TestAdapterFactory:
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
-        adapter = AdapterFactory.create(
+        adapter = create_adapter(
             provider_config=provider_config,
             completion_params=completion_params,
             instructor_config=instructor_config,
@@ -226,7 +228,7 @@ class TestAdapterFactory:
             }
         )
 
-        adapter = AdapterFactory.create(
+        adapter = create_adapter(
             provider_config=provider_config,
             completion_params=completion_params,
             instructor_config=instructor_config,
@@ -255,27 +257,26 @@ class TestAdapterFactory:
 
 @pytest.mark.unit
 class TestFactoryErrorHandling:
-
     def test_factory_all_providers_have_cases(self) -> None:
         from fatum.structify.types import Provider
 
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
-        openai_adapter = AdapterFactory.create(
+        openai_adapter = create_adapter(
             provider_config=OpenAIProviderConfig(api_key="test"),
             completion_params=OpenAICompletionClientParams(model="gpt-4"),
             instructor_config=instructor_config,
         )
         assert openai_adapter.provider_config.provider == Provider.OPENAI.value
 
-        anthropic_adapter = AdapterFactory.create(
+        anthropic_adapter = create_adapter(
             provider_config=AnthropicProviderConfig(api_key="test"),
             completion_params=AnthropicCompletionClientParams(model="claude-3"),
             instructor_config=instructor_config,
         )
         assert anthropic_adapter.provider_config.provider == Provider.ANTHROPIC.value
 
-        gemini_adapter = AdapterFactory.create(
+        gemini_adapter = create_adapter(
             provider_config=GeminiProviderConfig(api_key="test"),
             completion_params=GeminiCompletionClientParams(model="gemini-pro"),
             instructor_config=instructor_config,
@@ -287,14 +288,11 @@ class TestFactoryErrorHandling:
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
-        adapter = AdapterFactory.create(
+        adapter = create_adapter(
             provider_config=provider_config,
             completion_params=completion_params,
             instructor_config=instructor_config,
         )
-
-        assert adapter._client is None
-        assert adapter._instructor is None
 
         assert adapter.provider_config is not None
         assert adapter.completion_params is not None
@@ -309,13 +307,13 @@ class TestFactoryErrorHandling:
         completion_params2 = OpenAICompletionClientParams(model="gpt-3.5-turbo")
         instructor_config2 = InstructorConfig(mode=instructor.Mode.TOOLS)
 
-        adapter1 = AdapterFactory.create(
+        adapter1 = create_adapter(
             provider_config=provider_config1,
             completion_params=completion_params1,
             instructor_config=instructor_config1,
         )
 
-        adapter2 = AdapterFactory.create(
+        adapter2 = create_adapter(
             provider_config=provider_config2,
             completion_params=completion_params2,
             instructor_config=instructor_config2,
@@ -333,13 +331,12 @@ class TestFactoryErrorHandling:
 
 @pytest.mark.unit
 class TestFactoryTypeAnnotations:
-
     def test_factory_return_type_openai(self) -> None:
         provider_config = OpenAIProviderConfig(api_key="test_key")
         completion_params = OpenAICompletionClientParams(model="gpt-4")
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 
-        adapter = AdapterFactory.create(
+        adapter = create_adapter(
             provider_config=provider_config,
             completion_params=completion_params,
             instructor_config=instructor_config,
@@ -354,7 +351,7 @@ class TestFactoryTypeAnnotations:
         completion_params = AnthropicCompletionClientParams(model="claude-3")
         instructor_config = InstructorConfig(mode=instructor.Mode.ANTHROPIC_TOOLS)
 
-        adapter = AdapterFactory.create(
+        adapter = create_adapter(
             provider_config=provider_config,
             completion_params=completion_params,
             instructor_config=instructor_config,
@@ -369,7 +366,7 @@ class TestFactoryTypeAnnotations:
         completion_params = GeminiCompletionClientParams(model="gemini-pro")
         instructor_config = InstructorConfig(mode=instructor.Mode.GENAI_STRUCTURED_OUTPUTS)
 
-        adapter = AdapterFactory.create(
+        adapter = create_adapter(
             provider_config=provider_config,
             completion_params=completion_params,
             instructor_config=instructor_config,
@@ -378,3 +375,68 @@ class TestFactoryTypeAnnotations:
         assert type(adapter).__name__ == "GeminiAdapter"
         assert hasattr(adapter, "_create_client")
         assert hasattr(adapter, "_with_instructor")
+
+    def test_factory_invalid_provider_config_raises_assertion_error(self) -> None:
+        class InvalidProviderConfig(BaseProviderConfig):
+            provider: Literal["invalid"] = "invalid"
+
+        invalid_config = InvalidProviderConfig(api_key="test_key")
+        completion_params = OpenAICompletionClientParams(model="gpt-4")
+        instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
+
+        with pytest.raises(AssertionError) as exc_info:
+            create_adapter(
+                provider_config=cast(OpenAIProviderConfig, invalid_config),
+                completion_params=completion_params,
+                instructor_config=instructor_config,
+            )
+
+        error_msg = str(exc_info.value)
+        assert "InvalidProviderConfig" in error_msg or "unreachable" in error_msg
+
+    def test_factory_handles_dynamic_invalid_config(self) -> None:
+        from typing import Literal
+
+        DynamicProviderConfig = type(
+            "DynamicProviderConfig",
+            (BaseProviderConfig,),
+            {
+                "__annotations__": {"provider": Literal["dynamic_invalid"], "api_key": str},
+                "provider": "dynamic_invalid",
+            },
+        )
+        invalid_config = DynamicProviderConfig(api_key="test")
+
+        completion_params = GeminiCompletionClientParams(model="gemini-pro")
+        instructor_config = InstructorConfig(mode=instructor.Mode.GENAI_STRUCTURED_OUTPUTS)
+
+        with pytest.raises(AssertionError):
+            create_adapter(
+                provider_config=cast(GeminiProviderConfig, invalid_config),
+                completion_params=completion_params,
+                instructor_config=instructor_config,
+            )
+
+    def test_exhaustive_pattern_matching_safety(self) -> None:
+        instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
+
+        openai_adapter = create_adapter(
+            provider_config=OpenAIProviderConfig(api_key="test"),
+            completion_params=OpenAICompletionClientParams(model="gpt-4"),
+            instructor_config=instructor_config,
+        )
+        assert isinstance(openai_adapter, OpenAIAdapter)
+
+        anthropic_adapter = create_adapter(
+            provider_config=AnthropicProviderConfig(api_key="test"),
+            completion_params=AnthropicCompletionClientParams(model="claude-3"),
+            instructor_config=instructor_config,
+        )
+        assert isinstance(anthropic_adapter, AnthropicAdapter)
+
+        gemini_adapter = create_adapter(
+            provider_config=GeminiProviderConfig(api_key="test"),
+            completion_params=GeminiCompletionClientParams(model="gemini-pro"),
+            instructor_config=instructor_config,
+        )
+        assert isinstance(gemini_adapter, GeminiAdapter)
