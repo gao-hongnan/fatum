@@ -6,7 +6,7 @@ from typing import Any
 from openai.types.chat import ChatCompletionMessageParam
 from pydantic import BaseModel, Field, computed_field
 
-from fatum.structify import AdapterFactory
+from fatum.structify import create_adapter
 from fatum.structify.adapters.anthropic import AnthropicAdapter
 from fatum.structify.adapters.gemini import GeminiAdapter
 from fatum.structify.adapters.openai import OpenAIAdapter
@@ -83,19 +83,19 @@ class CoVeOrchestrator(MaybeOrchestrator[CoVeVerifierConfig, CoVeCandidate]):
     def _create_adapter(self, agent_config: ProviderAgnosticAgent) -> OpenAIAdapter | AnthropicAdapter | GeminiAdapter:
         match (agent_config.provider_config, agent_config.completion_params):
             case (OpenAIProviderConfig() as pc, OpenAICompletionClientParams() as cp):
-                return AdapterFactory.create(
+                return create_adapter(
                     provider_config=pc,
                     completion_params=cp,
                     instructor_config=agent_config.instructor_config,
                 )
             case (AnthropicProviderConfig() as pc, AnthropicCompletionClientParams() as cp):
-                return AdapterFactory.create(
+                return create_adapter(
                     provider_config=pc,
                     completion_params=cp,
                     instructor_config=agent_config.instructor_config,
                 )
             case (GeminiProviderConfig() as pc, GeminiCompletionClientParams() as cp):
-                return AdapterFactory.create(
+                return create_adapter(
                     provider_config=pc,
                     completion_params=cp,
                     instructor_config=agent_config.instructor_config,

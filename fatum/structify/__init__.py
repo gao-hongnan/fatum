@@ -7,11 +7,11 @@ from fatum.structify.config import (
     OpenAIProviderConfig,
     ProviderConfig,
 )
-from fatum.structify.factory import AdapterFactory
+from fatum.structify.factory import create_adapter
 from fatum.structify.hooks import CompletionTrace
 
 __all__ = [
-    "AdapterFactory",
+    "create_adapter",
     "ChatCompletionMessageParam",
     "CompletionResult",
     "CompletionTrace",

@@ -44,7 +44,7 @@ from rich.syntax import Syntax
 from rich.table import Table
 from rich.text import Text
 
-from fatum.structify import AdapterFactory
+from fatum.structify import create_adapter
 from fatum.structify.adapters.anthropic import AnthropicAdapter
 from fatum.structify.adapters.gemini import GeminiAdapter
 from fatum.structify.adapters.openai import OpenAIAdapter
@@ -246,21 +246,21 @@ async def review_movie_streaming(
     return final_review or MovieReview(title="Unknown", rating=0, summary="", pros=[], cons=[])
 
 
-def create_adapter(provider: str) -> OpenAIAdapter | AnthropicAdapter | GeminiAdapter:
+def create_demo_adapter(provider: str) -> OpenAIAdapter | AnthropicAdapter | GeminiAdapter:
     if provider == "openai":
-        return AdapterFactory.create(
+        return create_adapter(
             provider_config=OpenAIProvider(api_key=settings.openai_api_key),
             completion_params=OpenAICompletion(),
             instructor_config=InstructorConfig(mode=instructor.Mode.TOOLS),
         )
     elif provider == "anthropic":
-        return AdapterFactory.create(
+        return create_adapter(
             provider_config=AnthropicProvider(api_key=settings.anthropic_api_key),
             completion_params=AnthropicCompletion(),
             instructor_config=InstructorConfig(mode=instructor.Mode.ANTHROPIC_TOOLS),
         )
     elif provider == "gemini":
-        return AdapterFactory.create(
+        return create_adapter(
             provider_config=GeminiProvider(api_key=settings.gemini_api_key),
             completion_params=GeminiCompletion(),
             instructor_config=InstructorConfig(mode=instructor.Mode.GENAI_STRUCTURED_OUTPUTS),
@@ -297,7 +297,7 @@ async def main() -> None:
     providers = ["openai", "anthropic", "gemini"] if args.provider == "all" else [args.provider]
 
     for i, provider in enumerate(providers):
-        adapter = create_adapter(provider)
+        adapter = create_demo_adapter(provider)
 
         if args.stream:
             await review_movie_streaming(adapter, messages, provider.title())
