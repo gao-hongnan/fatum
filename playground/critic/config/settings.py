@@ -7,11 +7,7 @@ from pydantic import BaseModel, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic_settings.sources import PydanticBaseSettingsSource, YamlConfigSettingsSource
 
-from fatum.structify.config import (
-    CompletionClientParams,
-    InstructorConfig,
-    ProviderConfig,
-)
+from fatum.structify.config import CompletionClientParams, InstructorConfig, ProviderConfig
 
 
 class BaseSettingsWithYaml(BaseSettings):

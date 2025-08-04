@@ -6,12 +6,12 @@ import pytest
 from pydantic import BaseModel
 
 from fatum.structify.types import (
-    BaseModelT,
     BaseProviderConfigT,
     Capability,
+    ClientResponseT,
     ClientT,
     Provider,
-    ResponseT,
+    StructuredResponseT,
 )
 
 if TYPE_CHECKING:
@@ -141,9 +141,9 @@ class TestCapabilityEnum:
 
 @pytest.mark.unit
 class TestTypeVars:
-    def test_base_model_t(self) -> None:
-        assert BaseModelT.__bound__ is BaseModel
-        assert BaseModelT.__name__ == "BaseModelT"
+    def test_structured_response_t(self) -> None:
+        assert StructuredResponseT.__bound__ is BaseModel
+        assert StructuredResponseT.__name__ == "StructuredResponseT"
 
     def test_base_provider_config_t(self) -> None:
         assert BaseProviderConfigT.__name__ == "BaseProviderConfigT"
@@ -155,15 +155,15 @@ class TestTypeVars:
         if hasattr(ClientT, "__constraints__"):
             assert not ClientT.__constraints__
 
-    def test_response_t(self) -> None:
-        assert ResponseT.__name__ == "ResponseT"
-        if hasattr(ResponseT, "__bound__"):
-            bound = ResponseT.__bound__
+    def test_client_response_t(self) -> None:
+        assert ClientResponseT.__name__ == "ClientResponseT"
+        if hasattr(ClientResponseT, "__bound__"):
+            bound = ClientResponseT.__bound__
             assert bound is not None
 
     def test_type_var_variance(self) -> None:
-        assert not hasattr(BaseModelT, "__covariant__") or not BaseModelT.__covariant__
-        assert not hasattr(BaseModelT, "__contravariant__") or not BaseModelT.__contravariant__
+        assert not hasattr(StructuredResponseT, "__covariant__") or not StructuredResponseT.__covariant__
+        assert not hasattr(StructuredResponseT, "__contravariant__") or not StructuredResponseT.__contravariant__
 
         assert not hasattr(ClientT, "__covariant__") or not ClientT.__covariant__
         assert not hasattr(ClientT, "__contravariant__") or not ClientT.__contravariant__
@@ -178,22 +178,22 @@ class TestTypeDefinitions:
         assert types.TYPE_CHECKING is False
 
     def test_response_type_constraints(self) -> None:
-        assert hasattr(ResponseT, "__name__")
-        assert ResponseT.__name__ == "ResponseT"
+        assert hasattr(ClientResponseT, "__name__")
+        assert ClientResponseT.__name__ == "ClientResponseT"
 
     def test_forward_references(self) -> None:
         from fatum.structify.types import BaseProviderConfigT
 
-        assert isinstance(BaseProviderConfigT, type(BaseModelT))
+        assert isinstance(BaseProviderConfigT, type(StructuredResponseT))
 
     def test_module_level_exports(self) -> None:
         from fatum.structify import types
 
         expected_exports = [
-            "BaseModelT",
+            "StructuredResponseT",
             "BaseProviderConfigT",
             "ClientT",
-            "ResponseT",
+            "ClientResponseT",
             "Provider",
             "Capability",
         ]
@@ -222,10 +222,10 @@ class TestTypeAnnotations:
     def test_type_var_annotations(self) -> None:
         from typing import TypeVar
 
-        assert isinstance(BaseModelT, TypeVar)
+        assert isinstance(StructuredResponseT, TypeVar)
         assert isinstance(BaseProviderConfigT, TypeVar)
         assert isinstance(ClientT, TypeVar)
-        assert isinstance(ResponseT, TypeVar)
+        assert isinstance(ClientResponseT, TypeVar)
 
 
 @pytest.mark.unit
@@ -300,11 +300,11 @@ class TestTypeCompatibility:
     def test_type_var_generic_compatibility(self) -> None:
         from typing import Generic, List
 
-        class GenericContainer(Generic[BaseModelT]):
-            def __init__(self, items: List[BaseModelT]) -> None:
+        class GenericContainer(Generic[StructuredResponseT]):
+            def __init__(self, items: List[StructuredResponseT]) -> None:
                 self.items = items
 
-            def get_first(self) -> BaseModelT | None:
+            def get_first(self) -> StructuredResponseT | None:
                 return self.items[0] if self.items else None
 
         test_items = [SampleModel(name="test1", value=1), SampleModel(name="test2", value=2)]

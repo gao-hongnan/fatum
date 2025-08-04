@@ -14,7 +14,7 @@ class Allowable(BaseModel):
 
 
 class BaseProviderConfig(Allowable):
-    api_key: str = Field(default="")
+    api_key: str
 
 
 class OpenAIProviderConfig(BaseProviderConfig):
