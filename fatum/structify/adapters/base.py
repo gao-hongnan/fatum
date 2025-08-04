@@ -7,13 +7,13 @@ from typing import TYPE_CHECKING, Any, AsyncIterator, Generic, Literal, overload
 from instructor import AsyncInstructor
 from openai.types.chat import ChatCompletionMessageParam
 
-from fatum.structify.config import CompletionResult
 from fatum.structify.hooks import ahook_instructor
+from fatum.structify.models import CompletionResult
 from fatum.structify.types import BaseProviderConfigT, ClientResponseT, ClientT, StructuredResponseT
 
 if TYPE_CHECKING:
-    from fatum.structify.config import CompletionClientParams, CompletionResult, InstructorConfig
     from fatum.structify.hooks import CompletionTrace
+    from fatum.structify.models import CompletionClientParams, CompletionResult, InstructorConfig
 
 
 class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ClientResponseT]):

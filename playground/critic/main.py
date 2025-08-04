@@ -3,6 +3,7 @@ from __future__ import annotations
 import argparse
 import asyncio
 import json
+import time
 from pathlib import Path
 
 from .agents.cove import CoVeCandidate, CoVeOrchestrator
@@ -100,12 +101,14 @@ async def main() -> None:
         print(f"Loaded {len(user_queries)} questions")
 
         print("\n--- Running Batch CoVe Verification ---")
+        start = time.perf_counter()
         batch_result = await run_batch_verification(
             user_queries,
             env_file=args.env_file,
             yaml_file=args.yaml_file,
         )
-
+        end = time.perf_counter()
+        print(f"Time taken: {end - start:.2f} seconds")
         print("\nBatch Results:")
         print(f"Total questions: {batch_result.total_questions}")
         print(f"Aligned answers: {batch_result.aligned_count}")

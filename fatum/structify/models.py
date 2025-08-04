@@ -1,3 +1,5 @@
+"""Pydantic models for the structify module."""
+
 from __future__ import annotations
 
 from typing import Annotated, Generic, Literal
@@ -5,8 +7,9 @@ from typing import Annotated, Generic, Literal
 import instructor
 from pydantic import BaseModel, ConfigDict, Field
 
+from fatum.structify.enums import Capability, Provider
 from fatum.structify.hooks import CompletionTrace
-from fatum.structify.types import Capability, ClientResponseT, Provider, StructuredResponseT
+from fatum.structify.types import ClientResponseT, StructuredResponseT
 
 
 class Allowable(BaseModel):
@@ -14,7 +17,7 @@ class Allowable(BaseModel):
 
 
 class BaseProviderConfig(Allowable):
-    api_key: str
+    api_key: str  # NOTE: All 3 big providers names this `api_key` - do a drift check if really need rename this or remove this field.
 
 
 class OpenAIProviderConfig(BaseProviderConfig):
@@ -29,15 +32,18 @@ class GeminiProviderConfig(BaseProviderConfig):
     provider: Literal["gemini"] = Field(default=Provider.GEMINI.value, exclude=True)
 
 
+class AzureOpenAIProviderConfig(BaseProviderConfig):
+    provider: Literal["azure-openai"] = Field(default=Provider.AZURE_OPENAI.value, exclude=True)
+
+
 ProviderConfig = Annotated[
-    OpenAIProviderConfig | AnthropicProviderConfig | GeminiProviderConfig,
+    OpenAIProviderConfig | AnthropicProviderConfig | GeminiProviderConfig | AzureOpenAIProviderConfig,
     Field(discriminator="provider"),
 ]
 
 
 class BaseClientParams(Allowable):
     capability: Capability = Field(exclude=True)
-
     model: str
 
 
@@ -66,8 +72,16 @@ class GeminiCompletionClientParams(BaseClientParams):
     capability: Capability = Field(default=Capability.COMPLETION, exclude=True)
 
 
+class AzureOpenAICompletionClientParams(BaseClientParams):
+    provider: Literal["azure-openai"] = Field(default=Provider.AZURE_OPENAI.value, exclude=True)
+    capability: Capability = Field(default=Capability.COMPLETION, exclude=True)
+
+
 CompletionClientParams = Annotated[
-    OpenAICompletionClientParams | AnthropicCompletionClientParams | GeminiCompletionClientParams,
+    OpenAICompletionClientParams
+    | AnthropicCompletionClientParams
+    | GeminiCompletionClientParams
+    | AzureOpenAICompletionClientParams,
     Field(discriminator="provider"),
 ]
 

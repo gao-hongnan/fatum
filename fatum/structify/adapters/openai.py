@@ -5,7 +5,7 @@ from openai import AsyncOpenAI
 from openai.types.chat import ChatCompletion
 
 from fatum.structify.adapters.base import BaseAdapter
-from fatum.structify.config import OpenAIProviderConfig
+from fatum.structify.models import OpenAIProviderConfig
 
 
 class OpenAIAdapter(BaseAdapter[OpenAIProviderConfig, AsyncOpenAI, ChatCompletion]):

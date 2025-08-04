@@ -1,14 +1,15 @@
 from openai.types.chat import ChatCompletionMessageParam
 
-from fatum.structify.config import (
+from fatum.structify.factory import create_adapter
+from fatum.structify.hooks import CompletionTrace
+from fatum.structify.models import (
     AnthropicProviderConfig,
+    AzureOpenAIProviderConfig,
     CompletionResult,
     GeminiProviderConfig,
     OpenAIProviderConfig,
     ProviderConfig,
 )
-from fatum.structify.factory import create_adapter
-from fatum.structify.hooks import CompletionTrace
 
 __all__ = [
     "create_adapter",
@@ -19,4 +20,5 @@ __all__ = [
     "OpenAIProviderConfig",
     "AnthropicProviderConfig",
     "GeminiProviderConfig",
+    "AzureOpenAIProviderConfig",
 ]

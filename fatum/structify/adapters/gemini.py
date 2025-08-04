@@ -8,12 +8,12 @@ from google.genai.types import GenerateContentConfig, GenerateContentResponse
 from openai.types.chat import ChatCompletionMessageParam
 
 from fatum.structify.adapters.base import BaseAdapter
-from fatum.structify.config import GeminiProviderConfig
 from fatum.structify.hooks import CompletionTrace, ahook_instructor
+from fatum.structify.models import GeminiProviderConfig
 from fatum.structify.types import StructuredResponseT
 
 if TYPE_CHECKING:
-    from fatum.structify.config import CompletionResult
+    from fatum.structify.models import CompletionResult
 
 
 class GeminiAdapter(BaseAdapter[GeminiProviderConfig, genai.Client, GenerateContentResponse]):

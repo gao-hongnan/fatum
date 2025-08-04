@@ -5,7 +5,7 @@ from anthropic import AsyncAnthropic
 from anthropic.types import Message as AnthropicResponse
 
 from fatum.structify.adapters.base import BaseAdapter
-from fatum.structify.config import AnthropicProviderConfig
+from fatum.structify.models import AnthropicProviderConfig
 
 
 class AnthropicAdapter(BaseAdapter[AnthropicProviderConfig, AsyncAnthropic, AnthropicResponse]):
