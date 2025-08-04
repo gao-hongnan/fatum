@@ -5,12 +5,11 @@ from typing import TYPE_CHECKING
 import pytest
 from pydantic import BaseModel
 
+from fatum.structify.enums import Capability, Provider
 from fatum.structify.types import (
     BaseProviderConfigT,
-    Capability,
     ClientResponseT,
     ClientT,
-    Provider,
     StructuredResponseT,
 )
 
@@ -29,11 +28,13 @@ class TestProviderEnum:
         assert str(Provider.OPENAI) == "openai"
         assert str(Provider.ANTHROPIC) == "anthropic"
         assert str(Provider.GEMINI) == "gemini"
+        assert str(Provider.AZURE_OPENAI) == "azure-openai"
 
     def test_provider_enum_membership(self) -> None:
         assert "openai" in Provider
         assert "anthropic" in Provider
         assert "gemini" in Provider
+        assert "azure-openai" in Provider
 
         assert "invalid_provider" not in Provider
         assert "chatgpt" not in Provider
@@ -41,10 +42,11 @@ class TestProviderEnum:
 
     def test_provider_enum_iteration(self) -> None:
         providers = list(Provider)
-        assert len(providers) == 3
+        assert len(providers) == 4
         assert Provider.OPENAI in providers
         assert Provider.ANTHROPIC in providers
         assert Provider.GEMINI in providers
+        assert Provider.AZURE_OPENAI in providers
 
     def test_provider_enum_string_operations(self) -> None:
         provider = Provider.OPENAI
@@ -189,17 +191,28 @@ class TestTypeDefinitions:
     def test_module_level_exports(self) -> None:
         from fatum.structify import types
 
-        expected_exports = [
+        expected_type_exports = [
             "StructuredResponseT",
             "BaseProviderConfigT",
             "ClientT",
             "ClientResponseT",
+            "CompletionClientParamsT",
+            "MessageParam",
+        ]
+
+        for export in expected_type_exports:
+            assert hasattr(types, export), f"Missing export in types.py: {export}"
+
+        # Check that enums are now in enums.py
+        from fatum.structify import enums
+
+        expected_enum_exports = [
             "Provider",
             "Capability",
         ]
 
-        for export in expected_exports:
-            assert hasattr(types, export), f"Missing export: {export}"
+        for export in expected_enum_exports:
+            assert hasattr(enums, export), f"Missing export in enums.py: {export}"
 
     def test_enum_base_classes(self) -> None:
         from enum import StrEnum

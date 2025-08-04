@@ -9,7 +9,7 @@ from fatum.structify import create_adapter
 from fatum.structify.adapters.anthropic import AnthropicAdapter
 from fatum.structify.adapters.gemini import GeminiAdapter
 from fatum.structify.adapters.openai import OpenAIAdapter
-from fatum.structify.config import (
+from fatum.structify.models import (
     AnthropicCompletionClientParams,
     AnthropicProviderConfig,
     BaseProviderConfig,
@@ -258,7 +258,7 @@ class TestAdapterRegistry:
 @pytest.mark.unit
 class TestFactoryErrorHandling:
     def test_factory_all_providers_have_cases(self) -> None:
-        from fatum.structify.types import Provider
+        from fatum.structify.enums import Provider
 
         instructor_config = InstructorConfig(mode=instructor.Mode.TOOLS)
 

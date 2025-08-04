@@ -6,7 +6,9 @@ import instructor
 import pytest
 from pydantic import BaseModel, ValidationError
 
-from fatum.structify.config import (
+from fatum.structify.enums import Capability, Provider
+from fatum.structify.hooks import CompletionTrace
+from fatum.structify.models import (
     Allowable,
     AnthropicCompletionClientParams,
     AnthropicProviderConfig,
@@ -19,8 +21,6 @@ from fatum.structify.config import (
     OpenAIProviderConfig,
     ProviderConfig,
 )
-from fatum.structify.hooks import CompletionTrace
-from fatum.structify.types import Capability, Provider
 
 
 @pytest.mark.unit
