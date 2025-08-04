@@ -16,7 +16,7 @@ uv run playground/structify/01_demo.py --provider openai --stream
 uv run playground/structify/01_demo.py --provider gemini --movie "Dune" --stream
 
 uv run playground/structify/01_demo.py --trace --provider all
-uv run playground/structify/01_demo.py --provider anthropic --trace
+uv run playground/structify/01_demo.py --provider openai --trace
 uv run playground/structify/01_demo.py --provider openai --movie "Interstellar" --stream --trace
 ```
 """
@@ -48,7 +48,7 @@ from fatum.structify import create_adapter
 from fatum.structify.adapters.anthropic import AnthropicAdapter
 from fatum.structify.adapters.gemini import GeminiAdapter
 from fatum.structify.adapters.openai import OpenAIAdapter
-from fatum.structify.config import (
+from fatum.structify.models import (
     AnthropicCompletionClientParams,
     AnthropicProviderConfig,
     CompletionResult,
