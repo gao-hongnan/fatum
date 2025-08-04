@@ -12,9 +12,11 @@ from .types import BatchVerificationResult, UserQuery, VerificationResult
 
 async def run_verification(
     user_query: UserQuery,
+    env_file: str | None = None,
+    yaml_file: str | None = None,
 ) -> CoVeCandidate:
     """Run verification using CoVe (Chain-of-Verification)."""
-    settings = get_settings(env_file=".env", yaml_file="critic/config/config.yaml")
+    settings = get_settings(env_file=env_file, yaml_file=yaml_file)
     cove_config = settings.cove
 
     orchestrator = CoVeOrchestrator(config=cove_config)
@@ -23,9 +25,15 @@ async def run_verification(
     return result
 
 
-async def run_batch_verification(user_queries: list[UserQuery]) -> BatchVerificationResult:
+async def run_batch_verification(
+    user_queries: list[UserQuery],
+    env_file: str | None = None,
+    yaml_file: str | None = None,
+) -> BatchVerificationResult:
     """Run verification on multiple user queries concurrently."""
-    tasks = [run_verification(user_query=user_query) for user_query in user_queries]
+    tasks = [
+        run_verification(user_query=user_query, env_file=env_file, yaml_file=yaml_file) for user_query in user_queries
+    ]
     results = await asyncio.gather(*tasks)
 
     verification_results = [
@@ -71,6 +79,18 @@ async def main() -> None:
         type=str,
         help="Output file path to save batch results (JSON format)",
     )
+    parser.add_argument(
+        "--env-file",
+        type=str,
+        default="playground/critic/.env",
+        help="Path to .env file (default: playground/critic/.env)",
+    )
+    parser.add_argument(
+        "--yaml-file",
+        type=str,
+        default="playground/critic/config/config.yaml",
+        help="Path to YAML config file (default: playground/critic/config/config.yaml)",
+    )
 
     args = parser.parse_args()
 
@@ -80,7 +100,11 @@ async def main() -> None:
         print(f"Loaded {len(user_queries)} questions")
 
         print("\n--- Running Batch CoVe Verification ---")
-        batch_result = await run_batch_verification(user_queries)
+        batch_result = await run_batch_verification(
+            user_queries,
+            env_file=args.env_file,
+            yaml_file=args.yaml_file,
+        )
 
         print("\nBatch Results:")
         print(f"Total questions: {batch_result.total_questions}")
@@ -89,7 +113,6 @@ async def main() -> None:
         print(f"Average confidence: {batch_result.average_confidence:.2f}")
 
         if args.output:
-            # Save results to file
             output_path = Path(args.output)
             with open(output_path, "w", encoding="utf-8") as f:
                 json.dump(batch_result.model_dump(), f, indent=4, ensure_ascii=False)
@@ -100,10 +123,18 @@ async def main() -> None:
             user_query=UserQuery(
                 question="Who was the first woman to win two Nobel Prizes in different scientific fields?"
             ),
+            env_file=args.env_file,
+            yaml_file=args.yaml_file,
         )
 
 
 if __name__ == "__main__":
     asyncio.run(main())
 
-# uv run main.py --input knowledge_questions.json --output cove_results.json
+"""
+uv run -m playground.critic.main \
+    --env-file playground/critic/.env \
+    --yaml-file playground/critic/config/config.yaml \
+    --input playground/critic/questions.json \
+    --output cove_results.json
+"""

@@ -38,7 +38,7 @@ x-instructor-config-gemini: &instructor-config-gemini
 cove:
   drafter:
     prompts:
-      base_path: "critic/prompts"
+      base_path: "playground/critic/prompts"
       user_prompt_path: "cove/drafter/user.j2"
       user_context_variables:
         question: ""
@@ -54,7 +54,7 @@ cove:
       <<: *instructor-config-gemini
   skeptic:
     prompts:
-      base_path: "critic/prompts"
+      base_path: "playground/critic/prompts"
       user_prompt_path: "cove/skeptic/user.j2"
       user_context_variables:
         question: ""
@@ -71,7 +71,7 @@ cove:
       <<: *instructor-config-openai
   fact_checker:
     prompts:
-      base_path: "critic/prompts"
+      base_path: "playground/critic/prompts"
       user_prompt_path: "cove/fact_checker/user.j2"
       user_context_variables:
         question: ""
@@ -86,7 +86,7 @@ cove:
       <<: *instructor-config-openai
   judge:
     prompts:
-      base_path: "critic/prompts"
+      base_path: "playground/critic/prompts"
       user_prompt_path: "cove/judge/user.j2"
       user_context_variables:
         question: ""
