@@ -15,11 +15,11 @@ if TYPE_CHECKING:
         CompletionClientParams,
     )
 
-BaseModelT = TypeVar("BaseModelT", bound=BaseModel)
+StructuredResponseT = TypeVar("StructuredResponseT", bound=BaseModel)
 BaseProviderConfigT = TypeVar("BaseProviderConfigT", bound="BaseProviderConfig")
 ClientT = TypeVar("ClientT")
 CompletionClientParamsT = TypeVar("CompletionClientParamsT", bound="CompletionClientParams")
-ResponseT = TypeVar("ResponseT", bound="ChatCompletion | AnthropicResponse | GenerateContentResponse")
+ClientResponseT = TypeVar("ClientResponseT", bound="ChatCompletion | AnthropicResponse | GenerateContentResponse")
 MessageParam: TypeAlias = dict[str, Any]
 
 

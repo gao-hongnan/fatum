@@ -5,11 +5,7 @@ from typing import TYPE_CHECKING, assert_never, overload
 from fatum.structify.adapters.anthropic import AnthropicAdapter
 from fatum.structify.adapters.gemini import GeminiAdapter
 from fatum.structify.adapters.openai import OpenAIAdapter
-from fatum.structify.config import (
-    AnthropicProviderConfig,
-    GeminiProviderConfig,
-    OpenAIProviderConfig,
-)
+from fatum.structify.config import AnthropicProviderConfig, GeminiProviderConfig, OpenAIProviderConfig
 
 if TYPE_CHECKING:
     from fatum.structify.config import (
@@ -47,6 +43,15 @@ def create_adapter(
     completion_params: GeminiCompletionClientParams,
     instructor_config: InstructorConfig,
 ) -> GeminiAdapter: ...
+
+
+@overload
+def create_adapter(
+    *,
+    provider_config: ProviderConfig,
+    completion_params: CompletionClientParams,
+    instructor_config: InstructorConfig,
+) -> OpenAIAdapter | AnthropicAdapter | GeminiAdapter: ...
 
 
 def create_adapter(

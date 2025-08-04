@@ -6,12 +6,7 @@ import instructor
 from pydantic import BaseModel, ConfigDict, Field
 
 from fatum.structify.hooks import CompletionTrace
-from fatum.structify.types import (
-    BaseModelT,
-    Capability,
-    Provider,
-    ResponseT,
-)
+from fatum.structify.types import Capability, ClientResponseT, Provider, StructuredResponseT
 
 
 class Allowable(BaseModel):
@@ -19,7 +14,7 @@ class Allowable(BaseModel):
 
 
 class BaseProviderConfig(Allowable):
-    api_key: str
+    api_key: str = Field(default="")
 
 
 class OpenAIProviderConfig(BaseProviderConfig):
@@ -81,8 +76,8 @@ class InstructorConfig(Allowable):
     mode: instructor.Mode
 
 
-class CompletionResult(BaseModel, Generic[BaseModelT, ResponseT]):
-    data: BaseModelT
-    trace: CompletionTrace[ResponseT]
+class CompletionResult(BaseModel, Generic[StructuredResponseT, ClientResponseT]):
+    data: StructuredResponseT
+    trace: CompletionTrace[ClientResponseT]
 
     model_config = ConfigDict(arbitrary_types_allowed=True)

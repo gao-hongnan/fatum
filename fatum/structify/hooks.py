@@ -10,7 +10,7 @@ from pydantic import BaseModel, ConfigDict, Field
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
 
-from fatum.structify.types import MessageParam, ResponseT
+from fatum.structify.types import ClientResponseT, MessageParam
 
 
 class HookHandler(Protocol):
@@ -19,10 +19,10 @@ class HookHandler(Protocol):
     def __call__(self, *args: Any, **kwargs: Any) -> None: ...
 
 
-class CompletionTrace(BaseModel, Generic[ResponseT]):
+class CompletionTrace(BaseModel, Generic[ClientResponseT]):
     completion_kwargs: dict[str, Any] = Field(default_factory=dict)
     messages: list[MessageParam] = Field(default_factory=list)
-    raw_response: ResponseT | None = None
+    raw_response: ClientResponseT | None = None
     parsed_result: BaseModel | None = None
     error: Exception | None = None
     last_attempt_error: Exception | None = None
@@ -33,8 +33,8 @@ class CompletionTrace(BaseModel, Generic[ResponseT]):
 
 def _setup_hooks(
     client: instructor.AsyncInstructor,
-) -> tuple[CompletionTrace[ResponseT], list[tuple[HookName, HookHandler]]]:
-    captured: CompletionTrace[ResponseT] = CompletionTrace()
+) -> tuple[CompletionTrace[ClientResponseT], list[tuple[HookName, HookHandler]]]:
+    captured: CompletionTrace[ClientResponseT] = CompletionTrace()
 
     def capture_kwargs(*_: Any, **kwargs: Any) -> None:
         captured.completion_kwargs = kwargs
@@ -47,7 +47,7 @@ def _setup_hooks(
 
         captured.messages = messages
 
-    def capture_response_data(response: ResponseT) -> None:
+    def capture_response_data(response: ClientResponseT) -> None:
         captured.raw_response = response
 
     def capture_error(error: Exception) -> None:
@@ -77,7 +77,7 @@ def _setup_hooks(
 async def ahook_instructor(
     client: instructor.AsyncInstructor,
     enable: bool = True,
-) -> AsyncIterator[CompletionTrace[ResponseT]]:
+) -> AsyncIterator[CompletionTrace[ClientResponseT]]:
     """
     Capture execution details from an asynchronous instructor client.
 
@@ -142,7 +142,7 @@ async def ahook_instructor(
     and unregistered correctly in an async context.
     """
     if not enable:
-        captured: CompletionTrace[ResponseT] = CompletionTrace()
+        captured: CompletionTrace[ClientResponseT] = CompletionTrace()
         yield captured
         return
 

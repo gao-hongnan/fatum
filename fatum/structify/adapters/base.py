@@ -9,14 +9,14 @@ from openai.types.chat import ChatCompletionMessageParam
 
 from fatum.structify.config import CompletionResult
 from fatum.structify.hooks import ahook_instructor
-from fatum.structify.types import BaseModelT, BaseProviderConfigT, ClientT, ResponseT
+from fatum.structify.types import BaseProviderConfigT, ClientResponseT, ClientT, StructuredResponseT
 
 if TYPE_CHECKING:
     from fatum.structify.config import CompletionClientParams, CompletionResult, InstructorConfig
     from fatum.structify.hooks import CompletionTrace
 
 
-class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
+class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ClientResponseT]):
     def __init__(
         self,
         *,
@@ -58,33 +58,33 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
     async def acreate(
         self,
         messages: list[ChatCompletionMessageParam],
-        response_model: type[BaseModelT],
+        response_model: type[StructuredResponseT],
         *,
         with_hooks: Literal[False] = False,
         **kwargs: Any,
-    ) -> BaseModelT: ...
+    ) -> StructuredResponseT: ...
 
     @overload
     async def acreate(
         self,
         messages: list[ChatCompletionMessageParam],
-        response_model: type[BaseModelT],
+        response_model: type[StructuredResponseT],
         *,
         with_hooks: Literal[True],
         **kwargs: Any,
-    ) -> CompletionResult[BaseModelT, ResponseT]: ...
+    ) -> CompletionResult[StructuredResponseT, ClientResponseT]: ...
 
     async def acreate(
         self,
         messages: list[ChatCompletionMessageParam],
-        response_model: type[BaseModelT],
+        response_model: type[StructuredResponseT],
         with_hooks: bool = False,
         **kwargs: Any,
-    ) -> BaseModelT | CompletionResult[BaseModelT, ResponseT]:
+    ) -> StructuredResponseT | CompletionResult[StructuredResponseT, ClientResponseT]:
         if not messages:
             raise ValueError("Messages list cannot be empty")
 
-        captured: CompletionTrace[ResponseT]
+        captured: CompletionTrace[ClientResponseT]
         # NOTE: Merge completion params with kwargs, letting kwargs override
         completion_kwargs = {**self.completion_params.model_dump(), **kwargs}
 
@@ -101,40 +101,40 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
     def astream(
         self,
         messages: list[ChatCompletionMessageParam],
-        response_model: type[BaseModelT],
+        response_model: type[StructuredResponseT],
         *,
         with_hooks: Literal[False] = False,
-    ) -> AsyncIterator[BaseModelT]: ...
+    ) -> AsyncIterator[StructuredResponseT]: ...
 
     @overload
     def astream(
         self,
         messages: list[ChatCompletionMessageParam],
-        response_model: type[BaseModelT],
+        response_model: type[StructuredResponseT],
         *,
         with_hooks: Literal[True],
-    ) -> AsyncIterator[CompletionResult[BaseModelT, ResponseT]]: ...
+    ) -> AsyncIterator[CompletionResult[StructuredResponseT, ClientResponseT]]: ...
 
     def astream(
         self,
         messages: list[ChatCompletionMessageParam],
-        response_model: type[BaseModelT],
+        response_model: type[StructuredResponseT],
         with_hooks: bool = False,
         **kwargs: Any,
-    ) -> AsyncIterator[BaseModelT | CompletionResult[BaseModelT, ResponseT]]:
+    ) -> AsyncIterator[StructuredResponseT | CompletionResult[StructuredResponseT, ClientResponseT]]:
         return self._astream(messages, response_model, with_hooks, **kwargs)
 
     async def _astream(
         self,
         messages: list[ChatCompletionMessageParam],
-        response_model: type[BaseModelT],
+        response_model: type[StructuredResponseT],
         with_hooks: bool = False,
         **kwargs: Any,
-    ) -> AsyncIterator[BaseModelT | CompletionResult[BaseModelT, ResponseT]]:
+    ) -> AsyncIterator[StructuredResponseT | CompletionResult[StructuredResponseT, ClientResponseT]]:
         if not messages:
             raise ValueError("Messages list cannot be empty")
 
-        captured: CompletionTrace[ResponseT]
+        captured: CompletionTrace[ClientResponseT]
         completion_kwargs = {**self.completion_params.model_dump(), **kwargs}
 
         async with ahook_instructor(self.instructor, enable=with_hooks) as captured:
@@ -148,10 +148,10 @@ class BaseAdapter(ABC, Generic[BaseProviderConfigT, ClientT, ResponseT]):
 
     def _assemble(
         self,
-        response: BaseModelT,
-        captured: CompletionTrace[ResponseT],
+        response: StructuredResponseT,
+        captured: CompletionTrace[ClientResponseT],
         with_hooks: bool,
-    ) -> BaseModelT | CompletionResult[BaseModelT, ResponseT]:
+    ) -> StructuredResponseT | CompletionResult[StructuredResponseT, ClientResponseT]:
         if not with_hooks:
             return response
 

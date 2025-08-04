@@ -10,7 +10,7 @@ from openai.types.chat import ChatCompletionMessageParam
 from fatum.structify.adapters.base import BaseAdapter
 from fatum.structify.config import GeminiProviderConfig
 from fatum.structify.hooks import CompletionTrace, ahook_instructor
-from fatum.structify.types import BaseModelT
+from fatum.structify.types import StructuredResponseT
 
 if TYPE_CHECKING:
     from fatum.structify.config import CompletionResult
@@ -32,29 +32,29 @@ class GeminiAdapter(BaseAdapter[GeminiProviderConfig, genai.Client, GenerateCont
     async def acreate(
         self,
         messages: list[ChatCompletionMessageParam],
-        response_model: type[BaseModelT],
+        response_model: type[StructuredResponseT],
         *,
         with_hooks: Literal[False] = False,
         **kwargs: Any,
-    ) -> BaseModelT: ...
+    ) -> StructuredResponseT: ...
 
     @overload
     async def acreate(
         self,
         messages: list[ChatCompletionMessageParam],
-        response_model: type[BaseModelT],
+        response_model: type[StructuredResponseT],
         *,
         with_hooks: Literal[True],
         **kwargs: Any,
-    ) -> CompletionResult[BaseModelT, GenerateContentResponse]: ...
+    ) -> CompletionResult[StructuredResponseT, GenerateContentResponse]: ...
 
     async def acreate(
         self,
         messages: list[ChatCompletionMessageParam],
-        response_model: type[BaseModelT],
+        response_model: type[StructuredResponseT],
         with_hooks: bool = False,
         **kwargs: Any,
-    ) -> BaseModelT | CompletionResult[BaseModelT, GenerateContentResponse]:
+    ) -> StructuredResponseT | CompletionResult[StructuredResponseT, GenerateContentResponse]:
         model = self.completion_params.model
         config = GenerateContentConfig(**self.completion_params.model_dump(exclude={"model"}))
 
@@ -73,10 +73,10 @@ class GeminiAdapter(BaseAdapter[GeminiProviderConfig, genai.Client, GenerateCont
     async def _astream(
         self,
         messages: list[ChatCompletionMessageParam],
-        response_model: type[BaseModelT],
+        response_model: type[StructuredResponseT],
         with_hooks: bool = False,
         **kwargs: Any,
-    ) -> AsyncIterator[BaseModelT | CompletionResult[BaseModelT, GenerateContentResponse]]:
+    ) -> AsyncIterator[StructuredResponseT | CompletionResult[StructuredResponseT, GenerateContentResponse]]:
         model = self.completion_params.model
         config = GenerateContentConfig(**self.completion_params.model_dump(exclude={"model"}))
 
