@@ -18,6 +18,7 @@
     "reportOptionalIterable": false,
     "reportOptionalContextManager": false,
     "reportOptionalOperand": false,
+    "reportPrivateUsage": false,
     "include": [
       "fatum",
       "tests"
