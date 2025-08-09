@@ -58,7 +58,14 @@ test = [
 ]
 
 docs = [
-    "jupyter-book>=2.0.0a0",
+    "jupyter-book==1.0.4.post1",
+    "myst-nb",
+    "sphinx-copybutton",
+    "sphinxcontrib-mermaid",
+    "sphinx-proof",
+    "sphinxcontrib-bibtex",
+    "sphinx-togglebutton",
+    "sphinx-design",
 ]
 
 dev = [

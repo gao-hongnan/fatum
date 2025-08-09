@@ -1,0 +1,56 @@
+title: "A Playbook For Fatum."
+author: Hongnan Gao
+copyright: "2025"
+logo: ""
+
+execute:
+  execute_notebooks: auto
+
+repository:
+  url: https://github.com/gaohn/fatum
+  path_to_book: playbook
+  branch: main
+
+html:
+  use_edit_page_button: false
+  use_repository_button: true
+  use_issues_button: false
+  navbar_number_sections: false
+  home_page_in_navbar: true
+
+latex:
+  latex_documents:
+    targetname: book.tex
+
+sphinx:
+  extra_extensions:
+    - sphinx_proof
+    - sphinx_togglebutton
+    - sphinx_design
+    - sphinxcontrib.mermaid
+    - sphinxcontrib.bibtex
+  config:
+    mermaid_version: "10.6.1"
+    bibtex_bibfiles:
+      - references.bib
+    bibtex_reference_style: author_year
+
+parse:
+  myst_enable_extensions:
+    - colon_fence
+    - deflist
+    - dollarmath
+    - html_admonition
+    - html_image
+    - linkify
+    - replacements
+    - smartquotes
+    - substitution
+    - tasklist
+    - amsmath
+
+exclude_patterns:
+  - _build
+  - Thumbs.db
+  - .DS_Store
+  - "**.ipynb_checkpoints"

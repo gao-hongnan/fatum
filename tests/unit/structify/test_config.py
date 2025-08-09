@@ -32,7 +32,7 @@ class TestAllowable:
         instance = TestModel(name="test", extra_field="extra_value")  # type: ignore[call-arg]
         assert instance.name == "test"
         assert hasattr(instance, "extra_field")
-        assert instance.extra_field == "extra_value"
+        assert instance.extra_field == "extra_value"  # type: ignore[attr-defined]
 
     def test_allowable_serialization(self) -> None:
         class TestModel(Allowable):
