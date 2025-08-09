@@ -7,7 +7,7 @@ from pydantic import BaseModel, Field
 
 class DraftResponse(BaseModel):
     reasoning: str = Field(..., description="Detailed reasoning for the alignment decision")
-    is_aligned: bool = Field(..., description="Whether the translation is aligned")
+    is_aligned: bool = Field(..., description="Whether the answer is aligned with facts")
 
 
 class SkepticQuestions(BaseModel):
@@ -26,6 +26,6 @@ class FactCheckAnswer(BaseModel):
 
 class JudgeVerdict(BaseModel):
     reasoning: str = Field(..., description="Reasoning for the final verdict based on verification results")
-    is_aligned: bool = Field(..., description="Final verdict on whether the translation is aligned")
+    is_aligned: bool = Field(..., description="Final verdict on whether the answer is aligned with facts")
     confidence: float = Field(..., description="Confidence level in the verdict (0.0-1.0)")
     revision_made: bool = Field(..., description="Whether the verdict differs from the initial assessment")
