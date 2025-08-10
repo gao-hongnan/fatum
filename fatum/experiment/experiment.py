@@ -624,3 +624,19 @@ class Experiment:
         if exc_type is not None:
             self.metadata = self.metadata.model_copy(update={"status": ExperimentStatus.FAILED})
         self.complete()
+
+    async def asave_artifact(self, source: Path, name: str) -> None:
+        """Async version of save_artifact."""
+        raise NotImplementedError("Async `save_artifact` not yet implemented")
+
+    async def asave_dict(self, data: dict[str, Any], name: str) -> None:
+        """Async version of save_dict."""
+        raise NotImplementedError("Async `save_dict` not yet implemented")
+
+    async def asave_file(self, source: Path, name: str) -> None:
+        """Async version of save_file."""
+        raise NotImplementedError("Async `save_file` not yet implemented")
+
+    async def asave_text(self, text: str, name: str) -> None:
+        """Async version of save_text."""
+        raise NotImplementedError("Async `save_text` not yet implemented")
