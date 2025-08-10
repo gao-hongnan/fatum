@@ -1,69 +1,14 @@
 from __future__ import annotations
 
-from enum import Enum
+from typing import Final
 
-DEFAULT_EXPERIMENTS_DIR = "./experiments"
-TIMESTAMP_FORMAT = "%Y%m%d_%H%M%S"
+DEFAULT_EXPERIMENTS_DIR: Final[str] = "./experiments"
+JSON_INDENT: Final[int] = 4
+TEMP_FILE_MODE: Final[str] = "w"
 
+EXPERIMENT_METADATA_FILE: Final[str] = "experiment.json"
+RUN_METADATA_FILE: Final[str] = "run.json"
+METRICS_SUMMARY_FILE: Final[str] = "metrics.json"
+PARAMETERS_FILE: Final[str] = "parameters.json"
 
-class Categories(str, Enum):
-    METADATA = "metadata"
-    PARAMETERS = "parameters"
-    METRICS = "metrics"
-    ARTIFACTS = "artifacts"
-
-    def __str__(self) -> str:
-        return self.value
-
-
-class FileNames(str, Enum):
-    EXPERIMENT_METADATA = "experiment.json"
-    PARAMETERS = "parameters.json"
-    METRICS_SUMMARY = "summary.json"
-
-    def __str__(self) -> str:
-        return self.value
-
-
-class FileExtensions(str, Enum):
-    JSON = ".json"
-    TXT = ".txt"
-    YAML = ".yaml"
-    YML = ".yml"
-
-    def __str__(self) -> str:
-        return self.value
-
-
-class ExperimentStatus(str, Enum):
-    RUNNING = "running"
-    COMPLETED = "completed"
-    FAILED = "failed"
-    CANCELLED = "cancelled"
-
-    def __str__(self) -> str:
-        return self.value
-
-
-YAML_EXTENSIONS = frozenset([FileExtensions.YAML, FileExtensions.YML])
-ALL_STATUSES = frozenset(
-    [ExperimentStatus.RUNNING, ExperimentStatus.COMPLETED, ExperimentStatus.FAILED, ExperimentStatus.CANCELLED]
-)
-ABSOLUTE_PATH_PREFIXES = ("/", "../")
-EMPTY_STRING = ""
-
-
-class StorageBackends(str, Enum):
-    LOCAL = "local"
-    MEMORY = "memory"
-
-    def __str__(self) -> str:
-        return self.value
-
-
-class Serializers(str, Enum):
-    JSON = "json"
-    YAML = "yaml"
-
-    def __str__(self) -> str:
-        return self.value
+RUN_ID_PREFIX: Final[str] = "run"
