@@ -8,7 +8,7 @@ TEMP_FILE_MODE: Final[str] = "w"
 
 EXPERIMENT_METADATA_FILE: Final[str] = "experiment.json"
 RUN_METADATA_FILE: Final[str] = "run.json"
-METRICS_SUMMARY_FILE: Final[str] = "metrics.json"
+METRICS_FILE: Final[str] = "metrics.jsonl"
 PARAMETERS_FILE: Final[str] = "parameters.json"
 
 RUN_ID_PREFIX: Final[str] = "run"

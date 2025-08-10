@@ -1,9 +1,3 @@
-"""
-Global experiment tracking API.
-
-Simple, clean, and storage-agnostic. Call from anywhere without passing objects.
-"""
-
 from __future__ import annotations
 
 import atexit
@@ -11,8 +5,8 @@ import contextvars
 from pathlib import Path
 from typing import Any
 
-from fatum.experiment.core import Experiment
-from fatum.experiment.storage import LocalFileStorage, StorageProtocol
+from fatum.experiment.experiment import Experiment
+from fatum.experiment.protocols import StorageBackend
 
 # NOTE: Context variable for async safety (better than thread-local)
 _active_experiment: contextvars.ContextVar[Experiment | None] = contextvars.ContextVar(
@@ -21,9 +15,10 @@ _active_experiment: contextvars.ContextVar[Experiment | None] = contextvars.Cont
 
 
 def init(
-    name: str | None = None,
+    name: str,
+    base_path: str | Path = "./experiments",
+    storage: StorageBackend | None = None,
     config: dict[str, Any] | None = None,
-    storage: StorageProtocol | None = None,
     **kwargs: Any,
 ) -> Experiment:
     """
@@ -31,14 +26,16 @@ def init(
 
     Parameters
     ----------
-    name : str, optional
-        Experiment name (defaults to "experiment")
+    name : str
+        Experiment name (required)
+    base_path : str | Path
+        Base directory for metrics and metadata (default: "./experiments")
+    storage : StorageBackend | None
+        Optional storage backend for artifacts (defaults to LocalStorage)
     config : dict, optional
         Configuration dictionary to save
-    storage : StorageProtocol, optional
-        Storage backend (defaults to LocalFileStorage)
     **kwargs : Any
-        Additional arguments passed directly to Experiment constructor
+        Additional arguments passed to Experiment constructor
 
     Returns
     -------
@@ -47,34 +44,25 @@ def init(
 
     Examples
     --------
-    Simple usage:
+    Simple local storage:
     >>> from fatum import experiment
     >>> experiment.init("my_experiment")
     >>> experiment.log({"accuracy": 0.95})
 
-    With configuration:
+    With custom storage backend:
+    >>> from my_storage import S3Storage
     >>> experiment.init(
     ...     name="alignment",
+    ...     storage=S3Storage("ml-bucket"),
     ...     config={"lr": 0.01, "batch_size": 32},
     ...     tags=["production", "v2"]
-    ... )
-
-    Pass-through parameters:
-    >>> experiment.init(
-    ...     name="experiment",
-    ...     description="Testing new model",
-    ...     tags=["baseline", "v1"]
     ... )
     """
     finish()
 
-    experiment_name = name or "experiment"
-
-    if storage is None:
-        storage = LocalFileStorage(Path("./experiments"))
-
     exp = Experiment(
-        name=experiment_name,
+        name=name,
+        base_path=base_path,
         storage=storage,
         **kwargs,
     )
