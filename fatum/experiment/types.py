@@ -10,7 +10,6 @@ from pydantic import BaseModel, ConfigDict, Field, field_validator
 ExperimentID = NewType("ExperimentID", str)
 RunID = NewType("RunID", str)
 MetricKey = NewType("MetricKey", str)
-ParamKey = NewType("ParamKey", str)
 ArtifactKey = NewType("ArtifactKey", str)
 StorageKey = NewType("StorageKey", str)
 
@@ -23,7 +22,6 @@ class StorageCategories(StrEnum):
     METADATA = "metadata"
     ARTIFACTS = "artifacts"
     METRICS = "metrics"
-    PARAMETERS = "parameters"
     RUNS = "runs"
     DATA = "data"
 
@@ -109,19 +107,6 @@ class Metric(BaseModel):
         return v
 
 
-class Parameter(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    key: ParamKey
-    value: Any
-    dtype: str = Field(default="")
-
-    def __init__(self, **data: Any) -> None:
-        if "dtype" not in data:
-            data["dtype"] = type(data.get("value", None)).__name__
-        super().__init__(**data)
-
-
 class Artifact(BaseModel):
     model_config = ConfigDict(frozen=True, extra="forbid")
 
@@ -131,11 +116,3 @@ class Artifact(BaseModel):
     size_bytes: int = 0
     mime_type: str = "application/octet-stream"
     created_at: datetime = Field(default_factory=datetime.now)
-
-
-class StorageMetadata(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
-    total_size_bytes: int = 0
-    artifact_count: int = 0
-    last_modified: datetime = Field(default_factory=datetime.now)

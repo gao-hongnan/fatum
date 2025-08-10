@@ -155,7 +155,7 @@ def log(data: dict[str, Any], step: int | None = None) -> None:
         run.log_metrics(data, step or 0)
 
 
-def save_dict(data: dict[str, Any], path: str) -> None:
+def save_dict(data: dict[str, Any], path: str, **json_kwargs: Any) -> None:
     """
     Save dictionary to the active experiment.
 
@@ -165,14 +165,18 @@ def save_dict(data: dict[str, Any], path: str) -> None:
         Dictionary to save as JSON
     path : str
         Relative path within the experiment directory
+    **json_kwargs
+        Keyword arguments passed directly to json.dump()
 
     Examples
     --------
     >>> experiment.save_dict({"model": "gpt-4"}, "configs/model.json")
+    >>> experiment.save_dict({"model": "gpt-4"}, "configs/model.json", indent=2)
+    >>> experiment.save_dict(results, "results.json", indent=4, sort_keys=True)
     """
     run = _active_run.get()
     if run:
-        run.save_dict(data, path)
+        run.save_dict(data, path, **json_kwargs)
 
 
 def save_text(text: str, path: str) -> None:

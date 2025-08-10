@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import json
+import os
 import tempfile
 import uuid
 from contextlib import contextmanager
@@ -9,7 +10,7 @@ from pathlib import Path
 from types import TracebackType
 from typing import Any, Iterator, Self
 
-from fatum.experiment.constants import JSON_INDENT, PARAMETERS_FILE, RUN_METADATA_FILE
+from fatum.experiment.constants import RUN_METADATA_FILE
 from fatum.experiment.exceptions import NotFoundError, StateError, ValidationError
 from fatum.experiment.protocols import StorageBackend
 from fatum.experiment.storage import LocalStorage
@@ -21,8 +22,6 @@ from fatum.experiment.types import (
     ExperimentStatus,
     Metric,
     MetricKey,
-    Parameter,
-    ParamKey,
     RunID,
     RunMetadata,
     RunStatus,
@@ -79,7 +78,6 @@ class Run:
             tags=tags or [],
         )
         self._metrics: list[Metric] = []
-        self._parameters: dict[ParamKey, Parameter] = {}
         self._artifacts: dict[ArtifactKey, Artifact] = {}
         self._completed = False
 
@@ -119,7 +117,7 @@ class Run:
         )
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
-            json.dump(metric.model_dump(mode="json"), tmp, indent=2)
+            json.dump(metric.model_dump(mode="json"), tmp)
             tmp_path = Path(tmp.name)
 
         try:
@@ -131,19 +129,6 @@ class Run:
         """Log multiple metrics at once."""
         for key, value in metrics.items():
             self.log_metric(key, value, step)
-
-    def log_param(self, key: str, value: Any) -> None:
-        """Log a parameter for this run."""
-        if self._completed:
-            raise StateError(self.metadata.status, "log parameter")
-
-        param = Parameter(key=ParamKey(key), value=value)
-        self._parameters[param.key] = param
-
-    def log_params(self, params: dict[str, Any]) -> None:
-        """Log multiple parameters at once."""
-        for key, value in params.items():
-            self.log_param(key, value)
 
     def save_artifacts(self, source: Path | str, name: str | None = None) -> list[StorageKey]:
         """Save artifacts (file or directory) to this run.
@@ -179,9 +164,6 @@ class Run:
             self.experiment._storage.save(storage_key, source_path)
             saved_keys.append(storage_key)
         else:
-            # Use os.walk to avoid recursion issues
-            import os
-
             name = name or source_path.name
 
             for root, _, files in os.walk(source_path):
@@ -194,13 +176,39 @@ class Run:
 
         return saved_keys
 
-    def save_dict(self, data: dict[str, Any], path: str, **tempfile_kwargs: Any) -> StorageKey:
-        """Save a dictionary as JSON to this run."""
+    def save_dict(self, data: dict[str, Any], path: str, **json_kwargs: Any) -> StorageKey:
+        """Save a dictionary as JSON to this run.
+
+        Parameters
+        ----------
+        data : dict[str, Any]
+            Dictionary to save as JSON
+        path : str
+            Relative path within the run directory
+        **json_kwargs
+            Keyword arguments passed directly to json.dump()
+
+        Returns
+        -------
+        StorageKey
+            The storage key where the data was saved
+
+        Examples
+        --------
+        >>> # Default compact JSON
+        >>> run.save_dict({"model": "gpt-4"}, "config.json")
+
+        >>> # Pretty printed with indentation
+        >>> run.save_dict({"model": "gpt-4"}, "config.json", indent=2)
+
+        >>> # Custom formatting
+        >>> run.save_dict(results, "results.json", indent=4, sort_keys=True)
+        """
         if self._completed:
             raise StateError(self.metadata.status, "save dict")
 
-        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json", **tempfile_kwargs) as tmp:
-            json.dump(data, tmp, indent=JSON_INDENT)
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json") as tmp:
+            json.dump(data, tmp, **json_kwargs)
             tmp_path = Path(tmp.name)
 
         try:
@@ -211,12 +219,12 @@ class Run:
         finally:
             tmp_path.unlink()
 
-    def save_text(self, text: str, path: str, **tempfile_kwargs: Any) -> StorageKey:
+    def save_text(self, text: str, path: str) -> StorageKey:
         """Save text content to a file in this run."""
         if self._completed:
             raise StateError(self.metadata.status, "save text")
 
-        with tempfile.NamedTemporaryFile(mode="w", delete=False, **tempfile_kwargs) as tmp:
+        with tempfile.NamedTemporaryFile(mode="w", delete=False) as tmp:
             tmp.write(text)
             tmp_path = Path(tmp.name)
 
@@ -264,35 +272,8 @@ class Run:
             return
 
         self.metadata = self.metadata.model_copy(update={"status": status, "ended_at": datetime.now()})
+        self.save_dict(self.metadata.model_dump(mode="json"), f"{StorageCategories.METADATA}/{RUN_METADATA_FILE}")
         self._completed = True
-        self._save_run_data()
-
-    def _save_run_data(self) -> None:
-        """Save run metadata, metrics, and parameters."""
-        run_base = f"{self.experiment.id}/{StorageCategories.RUNS}/{self.id}"
-
-        metadata_dict = self.metadata.model_dump(mode="json")
-        with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
-            json.dump(metadata_dict, tmp, indent=JSON_INDENT)
-            tmp_path = Path(tmp.name)
-
-        try:
-            storage_key = StorageKey(f"{run_base}/{StorageCategories.METADATA}/{RUN_METADATA_FILE}")
-            self.experiment._storage.save(storage_key, tmp_path)
-        finally:
-            tmp_path.unlink()
-
-        if self._parameters:
-            params_dict = {k: p.model_dump(mode="json") for k, p in self._parameters.items()}
-            with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
-                json.dump(params_dict, tmp, indent=JSON_INDENT)
-                tmp_path = Path(tmp.name)
-
-            try:
-                storage_key = StorageKey(f"{run_base}/{StorageCategories.PARAMETERS}/{PARAMETERS_FILE}")
-                self.experiment._storage.save(storage_key, tmp_path)
-            finally:
-                tmp_path.unlink()
 
     def __enter__(self) -> Self:
         return self
@@ -485,13 +466,17 @@ class Experiment:
         artifact = self._artifacts[artifact_key]
         return self._storage.load(artifact.storage_key)
 
-    def save_dict(self, data: dict[str, Any], path: str, **tempfile_kwargs: Any) -> StorageKey:
-        """Proxy to default run's save_dict for convenience."""
-        return self.get_or_create_default_run().save_dict(data, path, **tempfile_kwargs)
+    def log_metrics(self, data: dict[str, float], step: int | None = None) -> None:
+        """Proxy to default run's log_metrics for convenience."""
+        self.get_or_create_default_run().log_metrics(data, step or 0)
 
-    def save_text(self, text: str, path: str, **tempfile_kwargs: Any) -> StorageKey:
+    def save_dict(self, data: dict[str, Any], path: str, **json_kwargs: Any) -> StorageKey:
+        """Proxy to default run's save_dict for convenience."""
+        return self.get_or_create_default_run().save_dict(data, path, **json_kwargs)
+
+    def save_text(self, text: str, path: str) -> StorageKey:
         """Proxy to default run's save_text for convenience."""
-        return self.get_or_create_default_run().save_text(text, path, **tempfile_kwargs)
+        return self.get_or_create_default_run().save_text(text, path)
 
     def save_file(self, source: Path | str, relative_path: str) -> StorageKey:
         """Proxy to default run's save_file for convenience."""
@@ -501,7 +486,7 @@ class Experiment:
         """Save experiment metadata."""
         metadata_dict = self.metadata.model_dump(mode="json")
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
-            json.dump(metadata_dict, tmp, indent=JSON_INDENT)
+            json.dump(metadata_dict, tmp)
             tmp_path = Path(tmp.name)
 
         try:
@@ -551,11 +536,3 @@ class Experiment:
         if exc_type is not None:
             self.metadata = self.metadata.model_copy(update={"status": ExperimentStatus.FAILED})
         self.complete()
-
-    def log_metrics(self, data: dict[str, float], step: int | None = None) -> None:
-        """Proxy to default run's log_metrics for convenience."""
-        self.get_or_create_default_run().log_metrics(data, step or 0)
-
-    def log_params(self, params: dict[str, Any]) -> None:
-        """Proxy to default run's log_params for convenience."""
-        self.get_or_create_default_run().log_params(params)
