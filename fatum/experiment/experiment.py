@@ -10,11 +10,11 @@ from pathlib import Path
 from types import TracebackType
 from typing import Any, Iterator, Self
 
-from fatum.experiment.constants import RUN_METADATA_FILE
 from fatum.experiment.exceptions import NotFoundError, StateError, ValidationError
 from fatum.experiment.protocols import StorageBackend
 from fatum.experiment.storage import LocalStorage
 from fatum.experiment.types import (
+    RUN_METADATA_FILE,
     Artifact,
     ArtifactKey,
     ExperimentID,

@@ -3,9 +3,11 @@ from __future__ import annotations
 from datetime import datetime
 from enum import StrEnum
 from pathlib import Path
-from typing import Any, NewType, TypeAlias, TypeGuard
+from typing import Any, Final, NewType, TypeAlias, TypeGuard
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+RUN_METADATA_FILE: Final[str] = "run.json"
 
 ExperimentID = NewType("ExperimentID", str)
 RunID = NewType("RunID", str)
