@@ -586,7 +586,7 @@ wheels = [
 
 [[package]]
 name = "fatum"
-version = "3.0.0"
+version = "4.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
@@ -609,7 +609,6 @@ s3 = [
 [package.dev-dependencies]
 dev = [
     { name = "bandit" },
-    { name = "boto3" },
     { name = "commitizen" },
     { name = "coverage" },
     { name = "jupyter-book" },
@@ -678,7 +677,6 @@ provides-extras = ["s3"]
 [package.metadata.requires-dev]
 dev = [
     { name = "bandit", specifier = ">=1.8.6" },
-    { name = "boto3", specifier = ">=1.40.6" },
     { name = "commitizen", specifier = ">=4.8.3" },
     { name = "coverage", specifier = ">=7.9.2" },
     { name = "jupyter-book", specifier = "==1.0.4.post1" },

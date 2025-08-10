@@ -272,7 +272,9 @@ class Run:
             return
 
         self.metadata = self.metadata.model_copy(update={"status": status, "ended_at": datetime.now()})
-        self.save_dict(self.metadata.model_dump(mode="json"), f"{StorageCategories.METADATA}/{RUN_METADATA_FILE}")
+        self.save_dict(
+            self.metadata.model_dump(mode="json"), f"{StorageCategories.METADATA}/{RUN_METADATA_FILE}", indent=4
+        )
         self._completed = True
 
     def __enter__(self) -> Self:
@@ -396,7 +398,7 @@ class Experiment:
         self._completed = False
         self._default_run: Run | None = None
 
-        self._save_metadata()
+        self._save_metadata(indent=4)
 
     def start_run(self, name: str | None = None, tags: list[str] | None = None) -> Run:
         """Start a new run."""
@@ -482,11 +484,11 @@ class Experiment:
         """Proxy to default run's save_file for convenience."""
         return self.get_or_create_default_run().save_file(source, relative_path)
 
-    def _save_metadata(self) -> None:
+    def _save_metadata(self, **json_kwargs: Any) -> None:
         """Save experiment metadata."""
         metadata_dict = self.metadata.model_dump(mode="json")
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
-            json.dump(metadata_dict, tmp)
+            json.dump(metadata_dict, tmp, **json_kwargs)
             tmp_path = Path(tmp.name)
 
         try:
@@ -521,7 +523,7 @@ class Experiment:
         self.metadata = self.metadata.model_copy(
             update={"status": ExperimentStatus.COMPLETED, "updated_at": datetime.now()}
         )
-        self._save_metadata()
+        self._save_metadata(indent=4)
         self._completed = True
 
     def __enter__(self) -> Self:
