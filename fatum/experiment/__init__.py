@@ -11,13 +11,15 @@ from fatum.experiment.storage import LocalStorage
 from fatum.experiment.tracker import (
     finish,
     get_experiment,
+    get_run,
     init,
     is_active,
     log,
-    save_artifact,
+    save_artifacts,
     save_dict,
     save_file,
     save_text,
+    start_run,
 )
 from fatum.experiment.types import (
     ExperimentID,
@@ -47,12 +49,14 @@ __all__ = [
     "NotFoundError",
     "StateError",
     "init",
+    "start_run",
     "finish",
     "log",
     "save_dict",
     "save_text",
     "save_file",
-    "save_artifact",
+    "save_artifacts",
     "get_experiment",
+    "get_run",
     "is_active",
 ]

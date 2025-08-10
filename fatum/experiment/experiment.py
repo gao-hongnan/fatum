@@ -19,7 +19,6 @@ from fatum.experiment.types import (
     ExperimentID,
     ExperimentMetadata,
     ExperimentStatus,
-    FilePath,
     Metric,
     MetricKey,
     Parameter,
@@ -146,53 +145,118 @@ class Run:
         for key, value in params.items():
             self.log_param(key, value)
 
-    def log_artifact(self, source: FilePath, artifact_name: str | None = None) -> ArtifactKey:
-        """Save an artifact file for this run.
+    def save_artifacts(self, source: Path | str, name: str | None = None) -> list[StorageKey]:
+        """Save artifacts (file or directory) to this run.
 
-        Artifacts are saved using the experiment's storage backend, which can be
-        local filesystem or cloud storage (S3, GCS, etc.).
+        Handles both single files and directories (recursively).
+        Files are saved using the configured storage backend (local or cloud).
 
         Parameters
         ----------
-        source : FilePath
-            Path to the file to save as an artifact
-        artifact_name : str | None, optional
-            Name for the artifact, defaults to source filename
+        source : Path | str
+            File or directory to save
+        name : str | None
+            Name in storage (defaults to source name)
 
         Returns
         -------
-        ArtifactKey
-            Key that can be used to retrieve the artifact later
-
-        Examples
-        --------
-        >>> # Save model checkpoint
-        >>> run.log_artifact("checkpoint.pt")
-        >>>
-        >>> # Save with custom name
-        >>> run.log_artifact("/tmp/model.pkl", artifact_name="best_model.pkl")
+        list[StorageKey]
+            List of saved storage keys
         """
         if self._completed:
-            raise StateError(self.metadata.status, "log artifact")
+            raise StateError(self.metadata.status, "save artifacts")
+
+        source_path = Path(source)
+        if not source_path.exists():
+            raise ValidationError("source", str(source), "Source does not exist")
+
+        saved_keys = []
+        run_base = f"{self.experiment.id}/{StorageCategories.RUNS}/{self.id}"
+
+        if source_path.is_file():
+            artifact_name = name or source_path.name
+            storage_key = StorageKey(f"{run_base}/{StorageCategories.ARTIFACTS}/{artifact_name}")
+            self.experiment._storage.save(storage_key, source_path)
+            saved_keys.append(storage_key)
+        else:
+            # Use os.walk to avoid recursion issues
+            import os
+
+            name = name or source_path.name
+
+            for root, _, files in os.walk(source_path):
+                for file in files:
+                    file_path = Path(root) / file
+                    relative = file_path.relative_to(source_path)
+                    storage_key = StorageKey(f"{run_base}/{StorageCategories.ARTIFACTS}/{name}/{relative.as_posix()}")
+                    self.experiment._storage.save(storage_key, file_path)
+                    saved_keys.append(storage_key)
+
+        return saved_keys
+
+    def save_dict(self, data: dict[str, Any], path: str, **tempfile_kwargs: Any) -> StorageKey:
+        """Save a dictionary as JSON to this run."""
+        if self._completed:
+            raise StateError(self.metadata.status, "save dict")
+
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json", **tempfile_kwargs) as tmp:
+            json.dump(data, tmp, indent=JSON_INDENT)
+            tmp_path = Path(tmp.name)
+
+        try:
+            run_base = f"{self.experiment.id}/{StorageCategories.RUNS}/{self.id}"
+            storage_key = StorageKey(f"{run_base}/{path}")
+            self.experiment._storage.save(storage_key, tmp_path)
+            return storage_key
+        finally:
+            tmp_path.unlink()
+
+    def save_text(self, text: str, path: str, **tempfile_kwargs: Any) -> StorageKey:
+        """Save text content to a file in this run."""
+        if self._completed:
+            raise StateError(self.metadata.status, "save text")
+
+        with tempfile.NamedTemporaryFile(mode="w", delete=False, **tempfile_kwargs) as tmp:
+            tmp.write(text)
+            tmp_path = Path(tmp.name)
+
+        try:
+            run_base = f"{self.experiment.id}/{StorageCategories.RUNS}/{self.id}"
+            storage_key = StorageKey(f"{run_base}/{path}")
+            self.experiment._storage.save(storage_key, tmp_path)
+            return storage_key
+        finally:
+            tmp_path.unlink()
+
+    def save_file(self, source: Path | str, relative_path: str) -> StorageKey:
+        """Save a file to a specific path within this run."""
+        if self._completed:
+            raise StateError(self.metadata.status, "save file")
 
         source_path = Path(source)
         if not source_path.exists():
             raise ValidationError("source", str(source), "File does not exist")
 
-        name = artifact_name or source_path.name
-        artifact_key = ArtifactKey(f"{StorageCategories.ARTIFACTS}/{name}")
-        storage_key = StorageKey(f"{self.experiment.id}/{StorageCategories.RUNS}/{self.id}/{artifact_key}")
-
+        run_base = f"{self.experiment.id}/{StorageCategories.RUNS}/{self.id}"
+        storage_key = StorageKey(f"{run_base}/{relative_path}")
         self.experiment._storage.save(storage_key, source_path)
+        return storage_key
 
-        artifact = Artifact(
-            key=artifact_key,
-            storage_key=storage_key,
-            path=source_path,
-            size_bytes=source_path.stat().st_size if source_path.is_file() else 0,
-        )
-        self._artifacts[artifact_key] = artifact
-        return artifact_key
+    async def asave_artifacts(self, source: Path, name: str) -> None:
+        """Async version of save_artifacts."""
+        raise NotImplementedError("Async save_artifacts not yet implemented")
+
+    async def asave_dict(self, data: dict[str, Any], name: str) -> None:
+        """Async version of save_dict."""
+        raise NotImplementedError("Async save_dict not yet implemented")
+
+    async def asave_file(self, source: Path, name: str) -> None:
+        """Async version of save_file."""
+        raise NotImplementedError("Async save_file not yet implemented")
+
+    async def asave_text(self, text: str, name: str) -> None:
+        """Async version of save_text."""
+        raise NotImplementedError("Async save_text not yet implemented")
 
     def complete(self, status: RunStatus = RunStatus.COMPLETED) -> None:
         """Complete the run and save all data."""
@@ -322,6 +386,7 @@ class Experiment:
     def __init__(
         self,
         name: str,
+        id: str | None = None,
         base_path: str | Path = "./experiments",
         storage: StorageBackend | None = None,
         description: str = "",
@@ -329,7 +394,7 @@ class Experiment:
         run_id_prefix: str = "run",
     ) -> None:
         """Initialize experiment with hybrid storage."""
-        self.id = ExperimentID(f"{name}_{uuid.uuid4().hex[:8]}")
+        self.id = ExperimentID(id) if id else ExperimentID(f"{name}_{uuid.uuid4().hex[:8]}")
         self.metadata = ExperimentMetadata(
             id=self.id,
             name=name,
@@ -348,15 +413,27 @@ class Experiment:
         self._runs: dict[RunID, Run] = {}
         self._artifacts: dict[ArtifactKey, Artifact] = {}
         self._completed = False
+        self._default_run: Run | None = None
 
         self._save_metadata()
 
-    def start_run(self, name: str = "", tags: list[str] | None = None) -> Run:
+    def start_run(self, name: str | None = None, tags: list[str] | None = None) -> Run:
         """Start a new run."""
+        if name is None:
+            import time
+
+            name = f"run_{int(time.time())}"
+
         run_id = RunID(f"{self._run_id_prefix}_{uuid.uuid4().hex[:8]}" if self._run_id_prefix else uuid.uuid4().hex[:8])
         run = Run(run_id, self, name, tags)
         self._runs[run_id] = run
         return run
+
+    def get_or_create_default_run(self) -> Run:
+        """Get or create the default run for this experiment."""
+        if self._default_run is None:
+            self._default_run = self.start_run("default")
+        return self._default_run
 
     @contextmanager
     def run(self, name: str = "", tags: list[str] | None = None) -> Iterator[Run]:
@@ -396,50 +473,9 @@ class Experiment:
         finally:
             run.complete()
 
-    def log_artifact(self, source: FilePath, artifact_name: str | None = None) -> ArtifactKey:
-        """Log an artifact at the experiment level.
-
-        Experiment-level artifacts are shared across all runs. These are saved
-        using the configured storage backend (local or cloud).
-
-        Parameters
-        ----------
-        source : FilePath
-            Path to the file to save as an artifact
-        artifact_name : str | None, optional
-            Name for the artifact, defaults to source filename
-
-        Returns
-        -------
-        ArtifactKey
-            Key that can be used to retrieve the artifact later
-
-        Examples
-        --------
-        >>> # Save dataset
-        >>> exp.log_artifact("data/train.csv", "training_data.csv")
-        >>>
-        >>> # Save large model file (goes to S3 if configured)
-        >>> exp.log_artifact("model.bin")  # Direct S3 upload, no double I/O
-        """
-        source_path = Path(source)
-        if not source_path.exists():
-            raise ValidationError("source", str(source), "File does not exist")
-
-        name = artifact_name or source_path.name
-        artifact_key = ArtifactKey(f"{StorageCategories.ARTIFACTS}/{name}")
-        storage_key = StorageKey(f"{self.id}/{artifact_key}")
-
-        self._storage.save(storage_key, source_path)
-
-        artifact = Artifact(
-            key=artifact_key,
-            storage_key=storage_key,
-            path=source_path,
-            size_bytes=source_path.stat().st_size if source_path.is_file() else 0,
-        )
-        self._artifacts[artifact_key] = artifact
-        return artifact_key
+    def save_artifacts(self, source: Path | str, name: str | None = None) -> list[StorageKey]:
+        """Proxy to default run's save_artifacts for convenience."""
+        return self.get_or_create_default_run().save_artifacts(source, name)
 
     def load_artifact(self, artifact_key: ArtifactKey) -> Path:
         """Load an artifact."""
@@ -450,125 +486,16 @@ class Experiment:
         return self._storage.load(artifact.storage_key)
 
     def save_dict(self, data: dict[str, Any], path: str, **tempfile_kwargs: Any) -> StorageKey:
-        """Save a dictionary as JSON to the experiment directory.
-
-        This method is useful for saving configuration, hyperparameters, or any
-        structured data that needs to be preserved with the experiment.
-
-        Parameters
-        ----------
-        data : dict[str, Any]
-            Dictionary to save (must be JSON-serializable)
-        path : str
-            Relative path within experiment directory (e.g., "config.json")
-        **tempfile_kwargs : Any
-            Additional arguments for tempfile creation (encoding, prefix, etc.)
-
-        Returns
-        -------
-        StorageKey
-            Storage key for the saved file
-
-        Examples
-        --------
-        >>> # Save configuration
-        >>> config = {"model": "transformer", "layers": 12}
-        >>> exp.save_dict(config, "config.json")
-        >>>
-        >>> # Save to subdirectory
-        >>> exp.save_dict(results, "evaluation/results.json")
-
-        Creates:
-        ```
-        experiment_abc123/
-        ├── config.json
-        └── evaluation/
-            └── results.json
-        ```
-        """
-        with tempfile.NamedTemporaryFile(mode="w", delete=False, suffix=".json", **tempfile_kwargs) as tmp:
-            json.dump(data, tmp, indent=JSON_INDENT)
-            tmp_path = Path(tmp.name)
-
-        try:
-            storage_key = StorageKey(f"{self.id}/{path}")
-            # Use storage backend for user-created files
-            self._storage.save(storage_key, tmp_path)
-            return storage_key
-        finally:
-            tmp_path.unlink()
+        """Proxy to default run's save_dict for convenience."""
+        return self.get_or_create_default_run().save_dict(data, path, **tempfile_kwargs)
 
     def save_text(self, text: str, path: str, **tempfile_kwargs: Any) -> StorageKey:
-        """Save text content to a file in the experiment directory.
-
-        Useful for saving logs, notes, or any text-based information.
-
-        Parameters
-        ----------
-        text : str
-            Text content to save
-        path : str
-            Relative path within experiment directory (e.g., "notes.txt")
-        **tempfile_kwargs : Any
-            Additional arguments for tempfile creation
-
-        Returns
-        -------
-        StorageKey
-            Storage key for the saved file
-
-        Examples
-        --------
-        >>> # Save training log
-        >>> exp.save_text("Training completed successfully", "training.log")
-        >>>
-        >>> # Save model description
-        >>> exp.save_text(model_summary, "model_architecture.txt")
-        """
-        with tempfile.NamedTemporaryFile(mode="w", delete=False, **tempfile_kwargs) as tmp:
-            tmp.write(text)
-            tmp_path = Path(tmp.name)
-
-        try:
-            storage_key = StorageKey(f"{self.id}/{path}")
-            self._storage.save(storage_key, tmp_path)
-            return storage_key
-        finally:
-            tmp_path.unlink()
+        """Proxy to default run's save_text for convenience."""
+        return self.get_or_create_default_run().save_text(text, path, **tempfile_kwargs)
 
     def save_file(self, source: Path | str, relative_path: str) -> StorageKey:
-        """Save a file to a specific path within the experiment directory.
-
-        This method uses the storage backend for file operations, enabling
-        direct uploads to cloud storage without double I/O.
-
-        Parameters
-        ----------
-        source : Path | str
-            Source file path
-        relative_path : str
-            Relative path within experiment directory
-
-        Returns
-        -------
-        StorageKey
-            Storage key for the saved file
-
-        Examples
-        --------
-        >>> # Save plot
-        >>> exp.save_file("plot.png", "visualizations/loss_curve.png")
-        >>>
-        >>> # Save checkpoint (goes directly to S3 if configured)
-        >>> exp.save_file("checkpoint.pt", "checkpoints/epoch_10.pt")
-        """
-        source_path = Path(source)
-        if not source_path.exists():
-            raise ValidationError("source", str(source), "File does not exist")
-
-        storage_key = StorageKey(f"{self.id}/{relative_path}")
-        self._storage.save(storage_key, source_path)
-        return storage_key
+        """Proxy to default run's save_file for convenience."""
+        return self.get_or_create_default_run().save_file(source, relative_path)
 
     def _save_metadata(self) -> None:
         """Save experiment metadata."""
@@ -625,18 +552,10 @@ class Experiment:
             self.metadata = self.metadata.model_copy(update={"status": ExperimentStatus.FAILED})
         self.complete()
 
-    async def asave_artifact(self, source: Path, name: str) -> None:
-        """Async version of save_artifact."""
-        raise NotImplementedError("Async `save_artifact` not yet implemented")
+    def log_metrics(self, data: dict[str, float], step: int | None = None) -> None:
+        """Proxy to default run's log_metrics for convenience."""
+        self.get_or_create_default_run().log_metrics(data, step or 0)
 
-    async def asave_dict(self, data: dict[str, Any], name: str) -> None:
-        """Async version of save_dict."""
-        raise NotImplementedError("Async `save_dict` not yet implemented")
-
-    async def asave_file(self, source: Path, name: str) -> None:
-        """Async version of save_file."""
-        raise NotImplementedError("Async `save_file` not yet implemented")
-
-    async def asave_text(self, text: str, name: str) -> None:
-        """Async version of save_text."""
-        raise NotImplementedError("Async `save_text` not yet implemented")
+    def log_params(self, params: dict[str, Any]) -> None:
+        """Proxy to default run's log_params for convenience."""
+        self.get_or_create_default_run().log_params(params)
