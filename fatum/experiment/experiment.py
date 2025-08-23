@@ -10,13 +10,11 @@ from pathlib import Path
 from types import TracebackType
 from typing import Any, Iterator, Self
 
-from fatum.experiment.exceptions import NotFoundError, StateError, ValidationError
+from fatum.experiment.exceptions import StateError, ValidationError
 from fatum.experiment.protocols import StorageBackend
 from fatum.experiment.storage import LocalStorage
 from fatum.experiment.types import (
     RUN_METADATA_FILE,
-    Artifact,
-    ArtifactKey,
     ExperimentID,
     ExperimentMetadata,
     ExperimentStatus,
@@ -78,7 +76,6 @@ class Run:
             tags=tags or [],
         )
         self._metrics: list[Metric] = []
-        self._artifacts: dict[ArtifactKey, Artifact] = {}
         self._completed = False
 
     def log_metric(self, key: str, value: float, step: int = 0) -> None:
@@ -304,6 +301,8 @@ class Experiment:
 
     Parameters
     ----------
+    id : str | None, optional
+        Unique identifier for the experiment (defaults to a random UUID)
     name : str
         Name of the experiment (used to generate unique ID)
     base_path : str | Path, optional
@@ -377,6 +376,10 @@ class Experiment:
         run_id_prefix: str = "run",
     ) -> None:
         """Initialize experiment with hybrid storage."""
+
+        # FIXME: this is not well designed, offers no way to `load` experiment back due to
+        # tight coupling in the constructor!
+
         self.id = ExperimentID(id) if id else ExperimentID(f"{name}_{uuid.uuid4().hex[:8]}")
         self.metadata = ExperimentMetadata(
             id=self.id,
@@ -394,9 +397,7 @@ class Experiment:
         self._run_id_prefix = run_id_prefix
 
         self._runs: dict[RunID, Run] = {}
-        self._artifacts: dict[ArtifactKey, Artifact] = {}
         self._completed = False
-        self._default_run: Run | None = None
 
         self._save_metadata(indent=4)
 
@@ -411,12 +412,6 @@ class Experiment:
         run = Run(run_id, self, name, tags)
         self._runs[run_id] = run
         return run
-
-    def get_or_create_default_run(self) -> Run:
-        """Get or create the default run for this experiment."""
-        if self._default_run is None:
-            self._default_run = self.start_run("default")
-        return self._default_run
 
     @contextmanager
     def run(self, name: str = "", tags: list[str] | None = None) -> Iterator[Run]:
@@ -455,34 +450,6 @@ class Experiment:
             yield run
         finally:
             run.complete()
-
-    def save_artifacts(self, source: Path | str, name: str | None = None) -> list[StorageKey]:
-        """Proxy to default run's save_artifacts for convenience."""
-        return self.get_or_create_default_run().save_artifacts(source, name)
-
-    def load_artifact(self, artifact_key: ArtifactKey) -> Path:
-        """Load an artifact."""
-        if artifact_key not in self._artifacts:
-            raise NotFoundError("artifact", artifact_key)
-
-        artifact = self._artifacts[artifact_key]
-        return self._storage.load(artifact.storage_key)
-
-    def log_metrics(self, data: dict[str, float], step: int | None = None) -> None:
-        """Proxy to default run's log_metrics for convenience."""
-        self.get_or_create_default_run().log_metrics(data, step or 0)
-
-    def save_dict(self, data: dict[str, Any], path: str, **json_kwargs: Any) -> StorageKey:
-        """Proxy to default run's save_dict for convenience."""
-        return self.get_or_create_default_run().save_dict(data, path, **json_kwargs)
-
-    def save_text(self, text: str, path: str) -> StorageKey:
-        """Proxy to default run's save_text for convenience."""
-        return self.get_or_create_default_run().save_text(text, path)
-
-    def save_file(self, source: Path | str, relative_path: str) -> StorageKey:
-        """Proxy to default run's save_file for convenience."""
-        return self.get_or_create_default_run().save_file(source, relative_path)
 
     def _save_metadata(self, **json_kwargs: Any) -> None:
         """Save experiment metadata."""

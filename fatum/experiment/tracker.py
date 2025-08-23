@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-import atexit
 import contextvars
+from contextlib import contextmanager
 from pathlib import Path
-from typing import Any
+from typing import Any, Iterator
 
 from fatum.experiment.experiment import Experiment, Run
 from fatum.experiment.protocols import StorageBackend
@@ -15,52 +15,51 @@ _active_experiment: contextvars.ContextVar[Experiment | None] = contextvars.Cont
 _active_run: contextvars.ContextVar[Run | None] = contextvars.ContextVar("_active_run", default=None)
 
 
-def init(
+@contextmanager
+def experiment(
     name: str,
     id: str | None = None,
     base_path: str | Path = "./experiments",
     storage: StorageBackend | None = None,
-    config: dict[str, Any] | None = None,
     **kwargs: Any,
-) -> Experiment:
+) -> Iterator[Experiment]:
     """
-    Initialize a global experiment.
+    Context manager for creating and managing experiments.
 
     Parameters
     ----------
     name : str
         Experiment name (required)
+    id : str | None
+        Optional experiment ID (auto-generated if not provided)
     base_path : str | Path
         Base directory for metrics and metadata (default: "./experiments")
     storage : StorageBackend | None
         Optional storage backend for artifacts (defaults to LocalStorage)
-    config : dict, optional
-        Configuration dictionary to save
     **kwargs : Any
         Additional arguments passed to Experiment constructor
 
-    Returns
-    -------
+    Yields
+    ------
     Experiment
-        The initialized experiment
+        The experiment instance
 
     Examples
     --------
-    Simple local storage:
-    >>> from fatum import experiment
-    >>> experiment.init("my_experiment")
-    >>> experiment.log({"accuracy": 0.95})
+    Single-run experiment:
+    >>> with experiment.experiment("training") as exp:
+    ...     with experiment.run() as r:
+    ...         r.save_dict({"lr": 0.01}, "config.json")
+    ...         r.log_metrics({"loss": 0.5})
 
-    With custom storage backend:
-    >>> from my_storage import S3Storage
-    >>> experiment.init(
-    ...     name="alignment",
-    ...     storage=S3Storage("ml-bucket"),
-    ...     config={"lr": 0.01, "batch_size": 32},
-    ...     tags=["production", "v2"]
-    ... )
+    Multi-run experiment:
+    >>> with experiment.experiment("hyperparam_search") as exp:
+    ...     for lr in [0.001, 0.01]:
+    ...         with experiment.run(f"lr_{lr}") as r:
+    ...             r.save_dict({"lr": lr}, "config.json")
+    ...             r.log_metrics({"loss": 0.5})
     """
-    finish()
+    finish()  # Clean up any existing
 
     exp = Experiment(
         name=name,
@@ -72,16 +71,48 @@ def init(
 
     _active_experiment.set(exp)
 
-    # Auto-create default run (like W&B)
-    run = exp.start_run()
-    _active_run.set(run)
+    try:
+        yield exp
+    finally:
+        exp.complete()
+        _active_experiment.set(None)
 
-    if config:
-        run.save_dict(config, "config.json")
 
-    atexit.register(finish)
+@contextmanager
+def run(name: str | None = None, tags: list[str] | None = None) -> Iterator[Run]:
+    """
+    Context manager for creating and managing runs within the active experiment.
 
-    return exp
+    Parameters
+    ----------
+    name : str | None
+        Optional name for the run
+    tags : list[str] | None
+        Optional tags for the run
+
+    Yields
+    ------
+    Run
+        The run instance
+
+    Examples
+    --------
+    >>> with experiment.experiment("training") as exp:
+    ...     with experiment.run("epoch_1") as r:
+    ...         r.log_metrics({"loss": 0.5})
+    """
+    exp = _active_experiment.get()
+    if not exp:
+        raise RuntimeError("No active experiment. Use experiment() context manager first.")
+
+    r = exp.start_run(name, tags)
+    _active_run.set(r)
+
+    try:
+        yield r
+    finally:
+        r.complete()
+        _active_run.set(None)
 
 
 def start_run(name: str | None = None, tags: list[str] | None = None) -> Run:

@@ -9,12 +9,13 @@ from fatum.experiment.experiment import Experiment, Run
 from fatum.experiment.protocols import StorageBackend
 from fatum.experiment.storage import LocalStorage
 from fatum.experiment.tracker import (
+    experiment,
     finish,
     get_experiment,
     get_run,
-    init,
     is_active,
     log,
+    run,
     save_artifacts,
     save_dict,
     save_file,
@@ -48,7 +49,8 @@ __all__ = [
     "StorageError",
     "NotFoundError",
     "StateError",
-    "init",
+    "experiment",
+    "run",
     "start_run",
     "finish",
     "log",
