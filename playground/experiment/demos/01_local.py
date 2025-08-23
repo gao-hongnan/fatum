@@ -66,7 +66,7 @@ from fatum import experiment
 from fatum.experiment.experiment import Run
 from fatum.reproducibility.git import get_git_info
 
-from ..utils.demo_helpers import show_directory_tree, simulate_model_training
+from .utils import show_directory_tree, simulate_model_training
 
 console = Console()
 
