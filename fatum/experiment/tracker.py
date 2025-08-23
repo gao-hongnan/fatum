@@ -2,11 +2,11 @@ from __future__ import annotations
 
 import contextvars
 from contextlib import contextmanager
-from pathlib import Path
 from typing import Any, Iterator
 
 from fatum.experiment.experiment import Experiment, Run
 from fatum.experiment.protocols import StorageBackend
+from fatum.experiment.types import FilePath
 
 # NOTE: Context variables for async safety (better than thread-local)
 _active_experiment: contextvars.ContextVar[Experiment | None] = contextvars.ContextVar(
@@ -19,7 +19,7 @@ _active_run: contextvars.ContextVar[Run | None] = contextvars.ContextVar("_activ
 def experiment(
     name: str,
     id: str | None = None,
-    base_path: str | Path = "./experiments",
+    base_path: FilePath = "./experiments",
     storage: StorageBackend | None = None,
     **kwargs: Any,
 ) -> Iterator[Experiment]:
@@ -32,7 +32,7 @@ def experiment(
         Experiment name (required)
     id : str | None
         Optional experiment ID (auto-generated if not provided)
-    base_path : str | Path
+    base_path : FilePath
         Base directory for metrics and metadata (default: "./experiments")
     storage : StorageBackend | None
         Optional storage backend for artifacts (defaults to LocalStorage)
@@ -230,7 +230,7 @@ def save_text(text: str, path: str) -> None:
         run.save_text(text, path)
 
 
-def save_file(source: Path | str, path: str) -> None:
+def save_file(source: FilePath, path: str) -> None:
     """
     Save file to the active experiment.
 
@@ -250,7 +250,7 @@ def save_file(source: Path | str, path: str) -> None:
         run.save_file(source, path)
 
 
-def save_artifacts(source: Path | str, name: str | None = None) -> list[Any] | None:
+def save_artifacts(source: FilePath, name: str | None = None) -> list[Any] | None:
     """
     Save artifacts (file or directory) to the active experiment.
 

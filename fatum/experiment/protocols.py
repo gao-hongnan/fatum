@@ -3,6 +3,8 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Protocol, runtime_checkable
 
+from fatum.experiment.types import StorageKey
+
 
 @runtime_checkable
 class StorageBackend(Protocol):
@@ -12,19 +14,19 @@ class StorageBackend(Protocol):
     with the experiment tracking system.
     """
 
-    def save(self, key: str, source: Path) -> None:
+    def save(self, key: StorageKey, source: Path) -> None:
         """Save a file to storage.
 
         Parameters
         ----------
-        key : str
+        key : StorageKey
             Storage key (path in storage)
         source : Path
             Local file path to save
         """
         ...
 
-    def load(self, key: str) -> Path:
+    def load(self, key: StorageKey) -> Path:
         """Load a file from storage.
 
         For remote storage, this downloads the file to a temporary location.
@@ -32,7 +34,7 @@ class StorageBackend(Protocol):
 
         Parameters
         ----------
-        key : str
+        key : StorageKey
             Storage key (path in storage)
 
         Returns
@@ -42,12 +44,12 @@ class StorageBackend(Protocol):
         """
         ...
 
-    def get_uri(self, key: str) -> str:
+    def get_uri(self, key: StorageKey) -> str:
         """Get URI/location of artifact without downloading.
 
         Parameters
         ----------
-        key : str
+        key : StorageKey
             Storage key
 
         Returns
@@ -61,27 +63,27 @@ class StorageBackend(Protocol):
         """
         ...
 
-    def list_keys(self, prefix: str = "") -> list[str]:
+    def list_keys(self, prefix: StorageKey | None = None) -> list[StorageKey]:
         """List all keys with given prefix.
 
         Parameters
         ----------
-        prefix : str
+        prefix : StorageKey
             Key prefix to filter by
 
         Returns
         -------
-        list[str]
+        list[StorageKey]
             List of storage keys
         """
         ...
 
-    def exists(self, key: str) -> bool:
+    def exists(self, key: StorageKey) -> bool:
         """Check if a key exists in storage.
 
         Parameters
         ----------
-        key : str
+        key : StorageKey
             Storage key to check
 
         Returns
@@ -91,10 +93,10 @@ class StorageBackend(Protocol):
         """
         ...
 
-    async def asave(self, key: str, source: Path) -> None:
+    async def asave(self, key: StorageKey, source: Path) -> None:
         """Async save to storage."""
         raise NotImplementedError("Async save not implemented")
 
-    async def aload(self, key: str) -> Path:
+    async def aload(self, key: StorageKey) -> Path:
         """Async load from storage."""
         raise NotImplementedError("Async load not implemented")

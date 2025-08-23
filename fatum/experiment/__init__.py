@@ -23,13 +23,16 @@ from fatum.experiment.tracker import (
     start_run,
 )
 from fatum.experiment.types import (
+    ArtifactKey,
     ExperimentID,
     ExperimentMetadata,
     ExperimentStatus,
+    MetricKey,
     RunID,
     RunMetadata,
     RunStatus,
     StorageCategories,
+    StorageKey,
 )
 
 __all__ = [
@@ -37,8 +40,11 @@ __all__ = [
     "Run",
     "StorageBackend",
     "LocalStorage",
+    "ArtifactKey",
     "ExperimentID",
+    "MetricKey",
     "RunID",
+    "StorageKey",
     "ExperimentMetadata",
     "RunMetadata",
     "ExperimentStatus",

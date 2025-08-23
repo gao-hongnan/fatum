@@ -18,6 +18,7 @@ from fatum.experiment.types import (
     ExperimentID,
     ExperimentMetadata,
     ExperimentStatus,
+    FilePath,
     Metric,
     MetricKey,
     RunID,
@@ -78,7 +79,7 @@ class Run:
         self._metrics: list[Metric] = []
         self._completed = False
 
-    def log_metric(self, key: str, value: float, step: int = 0) -> None:
+    def log_metric(self, key: MetricKey, value: float, step: int = 0) -> None:
         """Log a metric value for this run.
 
         Metrics are immediately saved as individual files through the storage backend
@@ -86,7 +87,7 @@ class Run:
 
         Parameters
         ----------
-        key : str
+        key : MetricKey
             Name of the metric (e.g., "loss", "accuracy", "f1_score")
         value : float
             Numeric value of the metric
@@ -105,7 +106,7 @@ class Run:
         if self._completed:
             raise StateError(self.metadata.status, "log metric")
 
-        metric = Metric(key=MetricKey(key), value=value, step=step)
+        metric = Metric(key=key, value=value, step=step)
         self._metrics.append(metric)
 
         metric_filename = f"step_{step:06d}_{key}.json"
@@ -125,9 +126,9 @@ class Run:
     def log_metrics(self, metrics: dict[str, float], step: int = 0) -> None:
         """Log multiple metrics at once."""
         for key, value in metrics.items():
-            self.log_metric(key, value, step)
+            self.log_metric(MetricKey(key), value, step)
 
-    def save_artifacts(self, source: Path | str, name: str | None = None) -> list[StorageKey]:
+    def save_artifacts(self, source: FilePath, name: str | None = None) -> list[StorageKey]:
         """Save artifacts (file or directory) to this run.
 
         Handles both single files and directories (recursively).
@@ -233,7 +234,7 @@ class Run:
         finally:
             tmp_path.unlink()
 
-    def save_file(self, source: Path | str, relative_path: str) -> StorageKey:
+    def save_file(self, source: FilePath, relative_path: str) -> StorageKey:
         """Save a file to a specific path within this run."""
         if self._completed:
             raise StateError(self.metadata.status, "save file")
@@ -305,7 +306,7 @@ class Experiment:
         Unique identifier for the experiment (defaults to a random UUID)
     name : str
         Name of the experiment (used to generate unique ID)
-    base_path : str | Path, optional
+    base_path : FilePath, optional
         Base directory for metrics and metadata (always local), defaults to "./experiments"
     storage : StorageBackend | None, optional
         Optional storage backend for artifacts (defaults to LocalStorage).
@@ -369,7 +370,7 @@ class Experiment:
         self,
         name: str,
         id: str | None = None,
-        base_path: str | Path = "./experiments",
+        base_path: FilePath = "./experiments",
         storage: StorageBackend | None = None,
         description: str = "",
         tags: list[str] | None = None,
