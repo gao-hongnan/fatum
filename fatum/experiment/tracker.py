@@ -250,7 +250,7 @@ def save_file(source: FilePath, path: str) -> None:
         run.save_file(source, path)
 
 
-def save_artifacts(source: FilePath, name: str | None = None) -> list[Any] | None:
+def save_artifacts(source: FilePath, name: str | None = None) -> None:
     """
     Save artifacts (file or directory) to the active experiment.
 
@@ -269,8 +269,7 @@ def save_artifacts(source: FilePath, name: str | None = None) -> list[Any] | Non
     """
     run = _active_run.get()
     if run:
-        return run.save_artifacts(source, name)
-    return None
+        run.save_artifacts(source, name)
 
 
 def get_experiment() -> Experiment | None:

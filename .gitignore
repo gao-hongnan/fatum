@@ -77,3 +77,4 @@ cython_debug/
 .env
 **/genai/**/*
 **/llm/**/*
+outputs/
