@@ -138,7 +138,7 @@ class TestRun:
         assert run._metrics[1].value == 0.92
 
         metrics_dir = (
-            temp_storage.base_path / experiment.id / StorageCategories.RUNS / run.id / StorageCategories.METRICS
+            temp_storage.base_path / experiment.id / experiment._run_container / run.id / StorageCategories.METRICS
         )
         assert metrics_dir.exists()
         assert len(list(metrics_dir.glob("*.json"))) == 2
@@ -235,7 +235,7 @@ class TestRun:
         metadata_path = (
             temp_storage.base_path
             / experiment.id
-            / StorageCategories.RUNS
+            / experiment._run_container
             / run.id
             / StorageCategories.METADATA
             / "run.json"

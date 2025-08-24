@@ -79,6 +79,14 @@ class Run:
         self._metrics: list[Metric] = []
         self._completed = False
 
+    def _get_run_base_path(self) -> str:
+        """Get the base path for this run, considering the configurable run container."""
+        if self.experiment._run_container:
+            return f"{self.experiment.id}/{self.experiment._run_container}/{self.id}"
+        else:
+            # NOTE: Flat structure - run directly under experiment/
+            return f"{self.experiment.id}/{self.id}"
+
     def log_metric(self, key: MetricKey, value: float, step: int = 0) -> None:
         """Log a metric value for this run.
 
@@ -110,9 +118,7 @@ class Run:
         self._metrics.append(metric)
 
         metric_filename = f"step_{step:06d}_{key}.json"
-        storage_key = StorageKey(
-            f"{self.experiment.id}/{StorageCategories.RUNS}/{self.id}/{StorageCategories.METRICS}/{metric_filename}"
-        )
+        storage_key = StorageKey(f"{self._get_run_base_path()}/{StorageCategories.METRICS}/{metric_filename}")
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
             json.dump(metric.model_dump(mode="json"), tmp)
@@ -176,7 +182,7 @@ class Run:
             raise ValidationError("source", str(source), "Source does not exist")
 
         saved_keys = []
-        run_base = f"{self.experiment.id}/{StorageCategories.RUNS}/{self.id}"
+        run_base = self._get_run_base_path()
 
         base_path = f"{run_base}/{category}" if category else run_base
 
@@ -234,7 +240,7 @@ class Run:
             tmp_path = Path(tmp.name)
 
         try:
-            run_base = f"{self.experiment.id}/{StorageCategories.RUNS}/{self.id}"
+            run_base = self._get_run_base_path()
             storage_key = StorageKey(f"{run_base}/{path}")
             self.experiment._storage.save(storage_key, tmp_path)
             return storage_key
@@ -251,7 +257,7 @@ class Run:
             tmp_path = Path(tmp.name)
 
         try:
-            run_base = f"{self.experiment.id}/{StorageCategories.RUNS}/{self.id}"
+            run_base = self._get_run_base_path()
             storage_key = StorageKey(f"{run_base}/{path}")
             self.experiment._storage.save(storage_key, tmp_path)
             return storage_key
@@ -328,6 +334,8 @@ class Experiment:
         Tags for categorizing and filtering experiments
     run_id_prefix : str, optional
         Prefix for generated run IDs, defaults to "run"
+    run_container : str, optional
+        Container folder for runs, defaults to "runs". Use empty string for flat structure
 
     Examples
     --------
@@ -386,6 +394,7 @@ class Experiment:
         description: str = "",
         tags: list[str] | None = None,
         run_id_prefix: str = "run",
+        run_container: str = "runs",
     ) -> None:
         """Initialize experiment with hybrid storage."""
 
@@ -407,6 +416,7 @@ class Experiment:
         self._storage = storage or LocalStorage(base_path)
 
         self._run_id_prefix = run_id_prefix
+        self._run_container = run_container
 
         self._runs: dict[RunID, Run] = {}
         self._completed = False
@@ -415,12 +425,12 @@ class Experiment:
 
     def start_run(self, name: str | None = None, tags: list[str] | None = None) -> Run:
         """Start a new run."""
-        if name is None:
-            import time
+        if name:
+            run_id = RunID(name)
+        else:
+            run_id = RunID(f"run_{uuid.uuid4().hex[:8]}")
+            name = str(run_id)
 
-            name = f"run_{int(time.time())}"
-
-        run_id = RunID(f"{self._run_id_prefix}_{uuid.uuid4().hex[:8]}" if self._run_id_prefix else uuid.uuid4().hex[:8])
         run = Run(run_id, self, name, tags)
         self._runs[run_id] = run
         return run
@@ -435,7 +445,7 @@ class Experiment:
         Parameters
         ----------
         name : str, optional
-            Name for the run
+            Name for the run (used as folder name directly)
         tags : list[str] | None, optional
             Tags for the run
 
@@ -457,7 +467,7 @@ class Experiment:
         ...     raise ValueError("Something went wrong")
         >>> # Run marked as failed
         """
-        run = self.start_run(name, tags)
+        run = self.start_run(name if name else None, tags)
         try:
             yield run
         except Exception:

@@ -79,7 +79,7 @@ class TestExperimentIntegration:
         assert exp_metadata["name"] == "integration_test"
         assert exp_metadata["status"] == "completed"
 
-        runs_dir = exp_dir / StorageCategories.RUNS
+        runs_dir = exp_dir / "runs"
         run_dirs = list(runs_dir.iterdir())
         assert len(run_dirs) == 3
 
@@ -208,7 +208,7 @@ class TestExperimentIntegration:
 
         exp_dir = tmp_path / "experiments" / exp.id
         for run_id, expected_config in run_data.items():
-            config_path = exp_dir / StorageCategories.RUNS / run_id / "config.json"
+            config_path = exp_dir / "runs" / run_id / "config.json"  # Default run container
             assert config_path.exists()
 
             loaded_config = json.loads(config_path.read_text())

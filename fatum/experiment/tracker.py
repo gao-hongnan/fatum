@@ -59,7 +59,7 @@ def experiment(
     ...             r.save_dict({"lr": lr}, "config.json")
     ...             r.log_metrics({"loss": 0.5})
     """
-    finish()  # Clean up any existing
+    finish()
 
     exp = Experiment(
         name=name,

@@ -22,10 +22,7 @@ class StorageCategories(StrEnum):
     """Standard categories for organizing experiment data."""
 
     METADATA = "metadata"
-    ARTIFACTS = "artifacts"
     METRICS = "metrics"
-    RUNS = "runs"
-    DATA = "data"
 
 
 class ExperimentStatus(StrEnum):
