@@ -13,6 +13,7 @@ from typing import Any, Iterator, Self
 from fatum.experiment.exceptions import StateError, ValidationError
 from fatum.experiment.protocols import StorageBackend
 from fatum.experiment.types import (
+    EXPERIMENT_METADATA_FILE,
     RUN_METADATA_FILE,
     ExperimentID,
     ExperimentMetadata,
@@ -23,7 +24,6 @@ from fatum.experiment.types import (
     RunID,
     RunMetadata,
     RunStatus,
-    StorageCategories,
     StorageKey,
 )
 from fatum.reproducibility.git import get_git_info
@@ -117,7 +117,7 @@ class Run:
         self._metrics.append(metric)
 
         metric_filename = f"step_{step:06d}_{key}.json"
-        storage_key = StorageKey(f"{self._get_run_base_path()}/{StorageCategories.METRICS}/{metric_filename}")
+        storage_key = StorageKey(f"{self._get_run_base_path()}/{metric_filename}")
 
         with tempfile.NamedTemporaryFile(mode="w", suffix=".json", delete=False) as tmp:
             json.dump(metric.model_dump(mode="json"), tmp)
@@ -286,9 +286,7 @@ class Run:
             return
 
         self.metadata = self.metadata.model_copy(update={"status": status, "ended_at": datetime.now()})
-        self.save_dict(
-            self.metadata.model_dump(mode="json"), f"{StorageCategories.METADATA}/{RUN_METADATA_FILE}", indent=4
-        )
+        self.save_dict(self.metadata.model_dump(mode="json"), RUN_METADATA_FILE, indent=4)
         self._completed = True
 
     def __enter__(self) -> Self:
@@ -470,7 +468,7 @@ class Experiment:
             tmp_path = Path(tmp.name)
 
         try:
-            storage_key = StorageKey(f"{self.id}/{StorageCategories.METADATA}/experiment.json")
+            storage_key = StorageKey(f"{self.id}/{EXPERIMENT_METADATA_FILE}")
             self._storage.save(storage_key, tmp_path)
         finally:
             tmp_path.unlink()

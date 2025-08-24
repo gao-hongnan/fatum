@@ -32,7 +32,7 @@ class TestContextManagers:
         """Test experiment context manager."""
         with tracker.experiment(
             name="test_exp",
-            base_path=tmp_path / "experiments",
+            storage=LocalStorage(tmp_path / "experiments"),
             description="Test experiment",
         ) as exp:
             assert tracker.is_active()
@@ -44,7 +44,7 @@ class TestContextManagers:
 
     def test_run_context_manager(self, tmp_path: Path) -> None:
         """Test run context manager within experiment."""
-        with tracker.experiment("test_exp", base_path=tmp_path / "experiments"):
+        with tracker.experiment("test_exp", storage=LocalStorage(tmp_path / "experiments")):
             with tracker.run("test_run", tags=["tag1"]) as r:
                 assert tracker.get_run() == r
                 assert r.metadata.name == "test_run"
@@ -59,7 +59,7 @@ class TestContextManagers:
 
     def test_nested_runs(self, tmp_path: Path) -> None:
         """Test multiple sequential runs."""
-        with tracker.experiment("test_exp", base_path=tmp_path / "experiments") as exp:
+        with tracker.experiment("test_exp", storage=LocalStorage(tmp_path / "experiments")) as exp:
             with tracker.run("run1") as run1:
                 tracker.log({"metric1": 0.1})
 
@@ -76,7 +76,7 @@ class TestGlobalFunctions:
 
     def test_log_metrics(self, tmp_path: Path) -> None:
         """Test logging metrics via global function."""
-        with tracker.experiment("test_exp", base_path=tmp_path / "experiments"), tracker.run("test_run"):
+        with tracker.experiment("test_exp", storage=LocalStorage(tmp_path / "experiments")), tracker.run("test_run"):
             tracker.log({"loss": 0.5, "accuracy": 0.92})
             tracker.log({"val_loss": 0.3}, step=10)
 
@@ -86,7 +86,7 @@ class TestGlobalFunctions:
 
     def test_save_dict(self, tmp_path: Path) -> None:
         """Test saving dict via global function."""
-        with tracker.experiment("test_exp", base_path=tmp_path / "experiments"), tracker.run("test_run"):
+        with tracker.experiment("test_exp", storage=LocalStorage(tmp_path / "experiments")), tracker.run("test_run"):
             config: dict[str, Any] = {"lr": 0.01, "batch_size": 32}
             tracker.save_dict(config, "config.json")
 
@@ -96,7 +96,7 @@ class TestGlobalFunctions:
 
     def test_save_text(self, tmp_path: Path) -> None:
         """Test saving text via global function."""
-        with tracker.experiment("test_exp", base_path=tmp_path / "experiments"), tracker.run("test_run"):
+        with tracker.experiment("test_exp", storage=LocalStorage(tmp_path / "experiments")), tracker.run("test_run"):
             tracker.save_text("Training complete", "status.txt")
 
             exp_path = tmp_path / "experiments"
@@ -109,7 +109,7 @@ class TestGlobalFunctions:
         source = tmp_path / "source.txt"
         source.write_text("source content")
 
-        with tracker.experiment("test_exp", base_path=tmp_path / "experiments"), tracker.run("test_run"):
+        with tracker.experiment("test_exp", storage=LocalStorage(tmp_path / "experiments")), tracker.run("test_run"):
             result = tracker.save(source, path="saved_file.txt")
             assert result is not None
             assert len(result) == 1
@@ -124,7 +124,7 @@ class TestGlobalFunctions:
         artifact = tmp_path / "artifact.pkl"
         artifact.write_bytes(b"model data")
 
-        with tracker.experiment("test_exp", base_path=tmp_path / "experiments"), tracker.run("test_run"):
+        with tracker.experiment("test_exp", storage=LocalStorage(tmp_path / "experiments")), tracker.run("test_run"):
             result = tracker.save(artifact, path="model.pkl", category="artifacts")
             assert result is not None
             assert len(result) == 1
@@ -136,7 +136,7 @@ class TestGlobalFunctions:
 
     def test_global_functions_without_run(self, tmp_path: Path) -> None:
         """Test that global functions handle missing run gracefully."""
-        with tracker.experiment("test_exp", base_path=tmp_path / "experiments"):
+        with tracker.experiment("test_exp", storage=LocalStorage(tmp_path / "experiments")):
             tracker.log({"metric": 0.5})
             tracker.save_dict({"test": "data"}, "test.json")
             tracker.save_text("text", "test.txt")
@@ -151,7 +151,7 @@ class TestStartRunFinish:
 
     def test_start_run_manual(self, tmp_path: Path) -> None:
         """Test manually starting and finishing runs."""
-        with tracker.experiment("test_exp", base_path=tmp_path / "experiments"):
+        with tracker.experiment("test_exp", storage=LocalStorage(tmp_path / "experiments")):
             run = tracker.start_run("manual_run")
             assert tracker.get_run() == run
 
@@ -163,7 +163,7 @@ class TestStartRunFinish:
 
     def test_start_run_auto_completes_previous(self, tmp_path: Path) -> None:
         """Test that start_run completes previous run."""
-        with tracker.experiment("test_exp", base_path=tmp_path / "experiments"):
+        with tracker.experiment("test_exp", storage=LocalStorage(tmp_path / "experiments")):
             run1 = tracker.start_run("run1")
             tracker.log({"metric1": 0.1})
 
@@ -175,7 +175,10 @@ class TestStartRunFinish:
 
     def test_finish_cleans_everything(self, tmp_path: Path) -> None:
         """Test finish cleans up both run and experiment."""
-        with tracker.experiment("test_exp", base_path=tmp_path / "experiments") as exp, tracker.run("test_run") as run:
+        with (
+            tracker.experiment("test_exp", storage=LocalStorage(tmp_path / "experiments")) as exp,
+            tracker.run("test_run") as run,
+        ):
             tracker.log({"metric": 0.5})
 
             tracker.finish()
@@ -193,7 +196,7 @@ class TestGetters:
         """Test getting active experiment."""
         assert tracker.get_experiment() is None
 
-        with tracker.experiment("test_exp", base_path=tmp_path / "experiments") as exp:
+        with tracker.experiment("test_exp", storage=LocalStorage(tmp_path / "experiments")) as exp:
             assert tracker.get_experiment() == exp
 
         assert tracker.get_experiment() is None
@@ -202,7 +205,7 @@ class TestGetters:
         """Test getting active run."""
         assert tracker.get_run() is None
 
-        with tracker.experiment("test_exp", base_path=tmp_path / "experiments"):
+        with tracker.experiment("test_exp", storage=LocalStorage(tmp_path / "experiments")):
             assert tracker.get_run() is None
 
             with tracker.run("test_run") as r:
@@ -214,7 +217,7 @@ class TestGetters:
         """Test checking if experiment is active."""
         assert not tracker.is_active()
 
-        with tracker.experiment("test_exp", base_path=tmp_path / "experiments"):
+        with tracker.experiment("test_exp", storage=LocalStorage(tmp_path / "experiments")):
             assert tracker.is_active()
 
         assert not tracker.is_active()
@@ -243,7 +246,7 @@ class TestErrorRecovery:
 
     def test_experiment_error_cleanup(self, tmp_path: Path) -> None:
         """Test that experiment cleans up on error."""
-        with pytest.raises(ValueError), tracker.experiment("test_exp", base_path=tmp_path / "experiments"):
+        with pytest.raises(ValueError), tracker.experiment("test_exp", storage=LocalStorage(tmp_path / "experiments")):
             raise ValueError("Test error")
 
         assert not tracker.is_active()
@@ -251,7 +254,7 @@ class TestErrorRecovery:
 
     def test_run_error_cleanup(self, tmp_path: Path) -> None:
         """Test that run cleans up on error."""
-        with tracker.experiment("test_exp", base_path=tmp_path / "experiments"):
+        with tracker.experiment("test_exp", storage=LocalStorage(tmp_path / "experiments")):
             run = None
             with pytest.raises(ValueError), tracker.run("error_run") as r:
                 run = r

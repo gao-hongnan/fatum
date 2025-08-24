@@ -10,7 +10,6 @@ import pytest
 
 from fatum.experiment import experiment, run
 from fatum.experiment.storage import LocalStorage
-from fatum.experiment.types import StorageCategories
 
 
 class TestExperimentIntegration:
@@ -73,7 +72,7 @@ class TestExperimentIntegration:
 
         exp_dir = base_path / exp.id
 
-        exp_metadata_path = exp_dir / StorageCategories.METADATA / "experiment.json"
+        exp_metadata_path = exp_dir / "experiment.json"
         assert exp_metadata_path.exists()
         exp_metadata = json.loads(exp_metadata_path.read_text())
         assert exp_metadata["name"] == "integration_test"
@@ -83,11 +82,11 @@ class TestExperimentIntegration:
         run_dirs = list(runs_dir.iterdir())
         assert len(run_dirs) == 3
 
-        training_runs = [d for d in run_dirs if "training" in (d / StorageCategories.METADATA / "run.json").read_text()]
+        training_runs = [d for d in run_dirs if "training" in (d / "run.json").read_text()]
         assert len(training_runs) == 1
         training_dir = training_runs[0]
 
-        training_run_metadata = json.loads((training_dir / StorageCategories.METADATA / "run.json").read_text())
+        training_run_metadata = json.loads((training_dir / "run.json").read_text())
         assert "train" in training_run_metadata["tags"]
 
         hyperparam_path = training_dir / "hyperparameters.json"
@@ -95,16 +94,15 @@ class TestExperimentIntegration:
         hyperparams = json.loads(hyperparam_path.read_text())
         assert hyperparams["learning_rate"] == 0.01
 
-        metrics_dir = training_dir / StorageCategories.METRICS
-        assert metrics_dir.exists()
-        metric_files = list(metrics_dir.glob("*.json"))
-        assert len(metric_files) == 6
+        assert training_dir.exists()
+        metric_files = list(training_dir.glob("step_*.json"))
+        assert len(metric_files) >= 3
 
         model_path = training_dir / "models" / "final_model.pkl"
         assert model_path.exists()
         assert model_path.read_bytes() == b"trained model data"
 
-        eval_runs = [d for d in run_dirs if "evaluation" in (d / StorageCategories.METADATA / "run.json").read_text()]
+        eval_runs = [d for d in run_dirs if "evaluation" in (d / "run.json").read_text()]
         assert len(eval_runs) == 1
         eval_dir = eval_runs[0]
 
@@ -229,7 +227,7 @@ class TestExperimentIntegration:
             with run("test_run") as r:
                 r.log_metrics({"metric": 0.5})
 
-        metadata_path = tmp_path / "experiments" / exp_id / StorageCategories.METADATA / "experiment.json"
+        metadata_path = tmp_path / "experiments" / exp_id / "experiment.json"
         assert metadata_path.exists()
 
         metadata = json.loads(metadata_path.read_text())

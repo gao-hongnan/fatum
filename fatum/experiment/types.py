@@ -7,6 +7,7 @@ from typing import Any, Final, NewType, TypeAlias, TypeGuard
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 
+EXPERIMENT_METADATA_FILE: Final[str] = "experiment.json"
 RUN_METADATA_FILE: Final[str] = "run.json"
 
 ExperimentID = NewType("ExperimentID", str)
@@ -16,13 +17,6 @@ ArtifactKey = NewType("ArtifactKey", str)
 StorageKey = NewType("StorageKey", str)
 
 FilePath: TypeAlias = Path | str
-
-
-class StorageCategories(StrEnum):
-    """Standard categories for organizing experiment data."""
-
-    METADATA = "metadata"
-    METRICS = "metrics"
 
 
 class ExperimentStatus(StrEnum):

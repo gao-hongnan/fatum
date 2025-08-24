@@ -30,7 +30,6 @@ from fatum.experiment.types import (
     RunID,
     RunMetadata,
     RunStatus,
-    StorageCategories,
     StorageKey,
 )
 
@@ -48,7 +47,6 @@ __all__ = [
     "RunMetadata",
     "ExperimentStatus",
     "RunStatus",
-    "StorageCategories",
     "ExperimentError",
     "ValidationError",
     "StorageError",

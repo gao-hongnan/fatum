@@ -16,7 +16,6 @@ from fatum.experiment.types import (
     ExperimentStatus,
     MetricKey,
     RunStatus,
-    StorageCategories,
 )
 
 
@@ -137,11 +136,10 @@ class TestRun:
         assert run._metrics[1].key == MetricKey("accuracy")
         assert run._metrics[1].value == 0.92
 
-        metrics_dir = (
-            temp_storage.base_path / experiment.id / experiment._run_container / run.id / StorageCategories.METRICS
-        )
-        assert metrics_dir.exists()
-        assert len(list(metrics_dir.glob("*.json"))) == 2
+        run_dir = temp_storage.base_path / experiment.id / experiment._run_container / run.id
+        assert run_dir.exists()
+        metric_files = list(run_dir.glob("step_*.json"))
+        assert len(metric_files) == 2
 
     def test_log_metrics_batch(self, experiment: Experiment) -> None:
         """Test logging multiple metrics at once."""
@@ -232,14 +230,7 @@ class TestRun:
         assert status == RunStatus.COMPLETED
         assert run.metadata.ended_at is not None
 
-        metadata_path = (
-            temp_storage.base_path
-            / experiment.id
-            / experiment._run_container
-            / run.id
-            / StorageCategories.METADATA
-            / "run.json"
-        )
+        metadata_path = temp_storage.base_path / experiment.id / experiment._run_container / run.id / "run.json"
         assert metadata_path.exists()
 
     def test_run_state_errors(self, experiment: Experiment) -> None:
