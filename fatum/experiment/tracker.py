@@ -112,6 +112,7 @@ def run(name: str | None = None, tags: list[str] | None = None) -> Iterator[Run]
         yield r
     except Exception:
         from fatum.experiment.types import RunStatus
+
         r.complete(RunStatus.FAILED)
         raise
     else:
