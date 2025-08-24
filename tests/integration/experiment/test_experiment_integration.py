@@ -43,7 +43,7 @@ class TestExperimentIntegration:
 
                 model_path = tmp_path / "model.pkl"
                 model_path.write_bytes(b"trained model data")
-                r.save_file(model_path, "models/final_model.pkl")
+                r.save(model_path, path="models/final_model.pkl")
 
             with run("evaluation", tags=["eval"]) as r:
                 r.log_metrics(
@@ -182,7 +182,7 @@ class TestExperimentIntegration:
         (subdir / "nested.txt").write_text("Nested content")
 
         with experiment("large_test", base_path=tmp_path / "experiments"), run("artifact_run") as r:
-            keys = r.save_artifacts(artifacts_dir, "all_artifacts")
+            keys = r.save(artifacts_dir, path="all_artifacts")
 
             assert len(keys) == 6
 

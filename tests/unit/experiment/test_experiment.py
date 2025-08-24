@@ -152,21 +152,21 @@ class TestRun:
 
         assert len(run._metrics) == 3
 
-    def test_save_artifacts_file(self, experiment: Experiment, tmp_path: Path) -> None:
-        """Test saving a single file artifact."""
-        run = experiment.start_run("artifact_run")
+    def test_save_file(self, experiment: Experiment, tmp_path: Path) -> None:
+        """Test saving a single file."""
+        run = experiment.start_run("file_run")
 
-        test_file = tmp_path / "test_artifact.txt"
+        test_file = tmp_path / "test_file.txt"
         test_file.write_text("test content")
 
-        keys = run.save_artifacts(test_file, name="my_artifact.txt")
+        keys = run.save(test_file, path="my_file.txt")
 
         assert len(keys) == 1
-        assert "my_artifact.txt" in str(keys[0])
+        assert "my_file.txt" in str(keys[0])
 
-    def test_save_artifacts_directory(self, experiment: Experiment, tmp_path: Path) -> None:
-        """Test saving a directory as artifacts."""
-        run = experiment.start_run("dir_artifact_run")
+    def test_save_directory(self, experiment: Experiment, tmp_path: Path) -> None:
+        """Test saving a directory."""
+        run = experiment.start_run("dir_run")
 
         test_dir = tmp_path / "test_dir"
         test_dir.mkdir()
@@ -174,7 +174,7 @@ class TestRun:
         (test_dir / "subdir").mkdir()
         (test_dir / "subdir" / "file2.txt").write_text("content2")
 
-        keys = run.save_artifacts(test_dir, name="my_dir")
+        keys = run.save(test_dir, path="my_dir")
 
         assert len(keys) == 2
         assert any("my_dir/file1.txt" in str(k) for k in keys)
@@ -204,18 +204,20 @@ class TestRun:
         assert saved_path.exists()
         assert saved_path.read_text() == text
 
-    def test_save_file(self, experiment: Experiment, tmp_path: Path, temp_storage: LocalStorage) -> None:
-        """Test saving an existing file."""
-        run = experiment.start_run("file_run")
+    def test_save_with_category(self, experiment: Experiment, tmp_path: Path, temp_storage: LocalStorage) -> None:
+        """Test saving with category prefix."""
+        run = experiment.start_run("category_run")
 
-        source = tmp_path / "source.pkl"
+        source = tmp_path / "model.pkl"
         source.write_bytes(b"model data")
 
-        key = run.save_file(source, "models/best_model.pkl")
+        keys = run.save(source, path="best_model.pkl", category="models")
 
-        saved_path = temp_storage.base_path / key
+        assert len(keys) == 1
+        saved_path = temp_storage.base_path / keys[0]
         assert saved_path.exists()
         assert saved_path.read_bytes() == b"model data"
+        assert "models/best_model.pkl" in str(keys[0])
 
     def test_complete_run(self, experiment: Experiment, temp_storage: LocalStorage) -> None:
         """Test completing a run."""
@@ -255,14 +257,14 @@ class TestRun:
             run.save_text("test", "test.txt")
 
         with pytest.raises(StateError):
-            run.save_artifacts(Path("."), "test")
+            run.save(Path("."), path="test")
 
     def test_invalid_artifact_source(self, experiment: Experiment) -> None:
         """Test saving non-existent artifact raises error."""
         run = experiment.start_run("invalid_run")
 
         with pytest.raises(ValidationError) as exc_info:
-            run.save_artifacts("/non/existent/path")
+            run.save("/non/existent/path")
 
         assert exc_info.value.field == "source"
         assert "does not exist" in str(exc_info.value)

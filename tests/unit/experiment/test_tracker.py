@@ -110,24 +110,29 @@ class TestGlobalFunctions:
         source.write_text("source content")
 
         with tracker.experiment("test_exp", base_path=tmp_path / "experiments"), tracker.run("test_run"):
-            tracker.save_file(source, "saved_file.txt")
+            result = tracker.save(source, path="saved_file.txt")
+            assert result is not None
+            assert len(result) == 1
 
             exp_path = tmp_path / "experiments"
             saved_files = list(exp_path.rglob("saved_file.txt"))
             assert len(saved_files) == 1
             assert saved_files[0].read_text() == "source content"
 
-    def test_save_artifacts(self, tmp_path: Path) -> None:
-        """Test saving artifacts via global function."""
+    def test_save_with_category(self, tmp_path: Path) -> None:
+        """Test saving with category via global function."""
         artifact = tmp_path / "artifact.pkl"
         artifact.write_bytes(b"model data")
 
         with tracker.experiment("test_exp", base_path=tmp_path / "experiments"), tracker.run("test_run"):
-            tracker.save_artifacts(artifact, "model.pkl")
+            result = tracker.save(artifact, path="model.pkl", category="artifacts")
+            assert result is not None
+            assert len(result) == 1
 
             exp_path = tmp_path / "experiments"
             model_files = list(exp_path.rglob("model.pkl"))
             assert len(model_files) == 1
+            assert "artifacts/model.pkl" in str(result[0])
 
     def test_global_functions_without_run(self, tmp_path: Path) -> None:
         """Test that global functions handle missing run gracefully."""
