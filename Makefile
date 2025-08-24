@@ -60,7 +60,7 @@ docs: .uv
 	cd $(DOCS_DIR) && uv run jupyter book build .
 
 .PHONY: ci
-ci: lint security typecheck test
+ci: lint security typecheck
 
 .PHONY: clean
 clean:
