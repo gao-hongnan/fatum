@@ -128,8 +128,13 @@ class Run:
         for key, value in metrics.items():
             self.log_metric(MetricKey(key), value, step)
 
-    def save_artifacts(self, source: FilePath, name: str | None = None) -> list[StorageKey]:
-        """Save artifacts (file or directory) to this run.
+    def save(
+        self,
+        source: FilePath,
+        path: str | None = None,
+        category: str | None = None,
+    ) -> list[StorageKey]:
+        """Save file or directory to this run.
 
         Handles both single files and directories (recursively).
         Files are saved using the configured storage backend (local or cloud).
@@ -138,16 +143,33 @@ class Run:
         ----------
         source : Path | str
             File or directory to save
-        name : str | None
-            Name in storage (defaults to source name)
+        path : str | None
+            Explicit path within the run directory. If None, uses source name.
+        category : str | None
+            Optional category prefix (e.g., "artifacts", "models").
+            If specified, files are saved under this subdirectory.
 
         Returns
         -------
         list[StorageKey]
             List of saved storage keys
+
+        Examples
+        --------
+        >>> # Save with automatic path
+        >>> run.save("model.pkl")
+
+        >>> # Save with explicit path
+        >>> run.save("model.pkl", path="models/best_model.pkl")
+
+        >>> # Save with category
+        >>> run.save("checkpoint.pt", category="checkpoints")
+
+        >>> # Save directory
+        >>> run.save("results/", path="experiment_results")
         """
         if self._completed:
-            raise StateError(self.metadata.status, "save artifacts")
+            raise StateError(self.metadata.status, "save")
 
         source_path = Path(source)
         if not source_path.exists():
@@ -156,19 +178,21 @@ class Run:
         saved_keys = []
         run_base = f"{self.experiment.id}/{StorageCategories.RUNS}/{self.id}"
 
+        base_path = f"{run_base}/{category}" if category else run_base
+
         if source_path.is_file():
-            artifact_name = name or source_path.name
-            storage_key = StorageKey(f"{run_base}/{StorageCategories.ARTIFACTS}/{artifact_name}")
+            storage_key = StorageKey(f"{base_path}/{path}") if path else StorageKey(f"{base_path}/{source_path.name}")
+
             self.experiment._storage.save(storage_key, source_path)
             saved_keys.append(storage_key)
         else:
-            name = name or source_path.name
+            target_name = path or source_path.name
 
             for root, _, files in os.walk(source_path):
                 for file in files:
                     file_path = Path(root) / file
                     relative = file_path.relative_to(source_path)
-                    storage_key = StorageKey(f"{run_base}/{StorageCategories.ARTIFACTS}/{name}/{relative.as_posix()}")
+                    storage_key = StorageKey(f"{base_path}/{target_name}/{relative.as_posix()}")
                     self.experiment._storage.save(storage_key, file_path)
                     saved_keys.append(storage_key)
 
@@ -234,33 +258,20 @@ class Run:
         finally:
             tmp_path.unlink()
 
-    def save_file(self, source: FilePath, relative_path: str) -> StorageKey:
-        """Save a file to a specific path within this run."""
-        if self._completed:
-            raise StateError(self.metadata.status, "save file")
+    async def asave(
+        self,
+        source: Path,
+        path: str | None = None,
+        category: str | None = None,
+    ) -> list[StorageKey]:
+        """Async version of save."""
+        raise NotImplementedError("Async save not yet implemented")
 
-        source_path = Path(source)
-        if not source_path.exists():
-            raise ValidationError("source", str(source), "File does not exist")
-
-        run_base = f"{self.experiment.id}/{StorageCategories.RUNS}/{self.id}"
-        storage_key = StorageKey(f"{run_base}/{relative_path}")
-        self.experiment._storage.save(storage_key, source_path)
-        return storage_key
-
-    async def asave_artifacts(self, source: Path, name: str) -> None:
-        """Async version of save_artifacts."""
-        raise NotImplementedError("Async save_artifacts not yet implemented")
-
-    async def asave_dict(self, data: dict[str, Any], name: str) -> None:
+    async def asave_dict(self, data: dict[str, Any], path: str) -> StorageKey:
         """Async version of save_dict."""
         raise NotImplementedError("Async save_dict not yet implemented")
 
-    async def asave_file(self, source: Path, name: str) -> None:
-        """Async version of save_file."""
-        raise NotImplementedError("Async save_file not yet implemented")
-
-    async def asave_text(self, text: str, name: str) -> None:
+    async def asave_text(self, text: str, path: str) -> StorageKey:
         """Async version of save_text."""
         raise NotImplementedError("Async save_text not yet implemented")
 

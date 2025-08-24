@@ -6,7 +6,7 @@ from typing import Any, Iterator
 
 from fatum.experiment.experiment import Experiment, Run
 from fatum.experiment.protocols import StorageBackend
-from fatum.experiment.types import FilePath
+from fatum.experiment.types import FilePath, StorageKey
 
 # NOTE: Context variables for async safety (better than thread-local)
 _active_experiment: contextvars.ContextVar[Experiment | None] = contextvars.ContextVar(
@@ -133,10 +133,9 @@ def start_run(name: str | None = None, tags: list[str] | None = None) -> Run:
 
     Examples
     --------
-    >>> experiment.init("hyperparameter_search")
-    >>> experiment.start_run("lr_0.01")
-    >>> experiment.log({"loss": 0.5})
-    >>> experiment.finish()
+    >>> with experiment.experiment("hyperparameter_search") as exp:
+    ...     with experiment.run("lr_0.01") as r:
+    ...         r.log_metrics({"loss": 0.5})
     """
     exp = _active_experiment.get()
     if not exp:
@@ -230,46 +229,42 @@ def save_text(text: str, path: str) -> None:
         run.save_text(text, path)
 
 
-def save_file(source: FilePath, path: str) -> None:
+def save(source: FilePath, path: str | None = None, category: str | None = None) -> list[StorageKey] | None:
     """
-    Save file to the active experiment.
-
-    Parameters
-    ----------
-    source : Path | str
-        Source file path
-    path : str
-        Relative path within the experiment directory
-
-    Examples
-    --------
-    >>> experiment.save_file("model.pkl", "artifacts/model.pkl")
-    """
-    run = _active_run.get()
-    if run:
-        run.save_file(source, path)
-
-
-def save_artifacts(source: FilePath, name: str | None = None) -> None:
-    """
-    Save artifacts (file or directory) to the active experiment.
+    Save file or directory to the active experiment.
 
     Parameters
     ----------
     source : Path | str
         Source file or directory path
-    name : str, optional
-        Name for the artifact (defaults to source name)
+    path : str | None
+        Explicit path within the run directory. If None, uses source name.
+    category : str | None
+        Optional category prefix (e.g., "artifacts", "models").
+
+    Returns
+    -------
+    list[StorageKey] | None
+        List of saved storage keys, or None if no active run
 
     Examples
     --------
-    >>> experiment.save_artifacts("model.pkl")
-    >>> experiment.save_artifacts("/path/to/data", "training_data")
-    >>> experiment.save_artifacts("checkpoints/")  # Saves directory recursively
+    >>> # Save with automatic path
+    >>> experiment.save("model.pkl")
+
+    >>> # Save with explicit path
+    >>> experiment.save("model.pkl", path="models/best_model.pkl")
+
+    >>> # Save with category
+    >>> experiment.save("checkpoint.pt", category="checkpoints")
+
+    >>> # Save directory
+    >>> experiment.save("results/", path="experiment_results")
     """
     run = _active_run.get()
     if run:
-        run.save_artifacts(source, name)
+        return run.save(source, path, category)
+    return None
 
 
 def get_experiment() -> Experiment | None:
