@@ -94,7 +94,7 @@ def _run_and_collect_metrics(run: Run, config: dict[str, Any], epochs: int = 5) 
 
     model_path = Path("dummy_model.txt")
     model_path.write_text("Pretrained model weights (simulated)")
-    run.save_file(model_path, "model/weights.pkl")
+    run.save(model_path, path="model/weights.pkl")
     model_path.unlink()
 
     return {
@@ -185,7 +185,7 @@ def run_multiple(output_dir: Path) -> None:
 
                 model_path = Path(f"model_lr_{lr}.txt")
                 model_path.write_text(f"Model weights trained with lr={lr}")
-                r.save_file(model_path, "model/weights.pkl")
+                r.save(model_path, path="model/weights.pkl")
                 model_path.unlink()
 
         table = Table(title=f"Hyperparameter Search Results - {exp.id}")

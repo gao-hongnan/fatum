@@ -460,8 +460,11 @@ class Experiment:
         run = self.start_run(name, tags)
         try:
             yield run
-        finally:
-            run.complete()
+        except Exception:
+            run.complete(RunStatus.FAILED)
+            raise
+        else:
+            run.complete(RunStatus.COMPLETED)
 
     def _save_metadata(self, **json_kwargs: Any) -> None:
         """Save experiment metadata."""
