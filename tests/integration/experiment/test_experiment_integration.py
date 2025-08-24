@@ -78,7 +78,6 @@ class TestExperimentIntegration:
         exp_metadata = json.loads(exp_metadata_path.read_text())
         assert exp_metadata["name"] == "integration_test"
         assert exp_metadata["status"] == "completed"
-        assert "train" in str(exp_metadata)
 
         runs_dir = exp_dir / StorageCategories.RUNS
         run_dirs = list(runs_dir.iterdir())
@@ -87,6 +86,9 @@ class TestExperimentIntegration:
         training_runs = [d for d in run_dirs if "training" in (d / StorageCategories.METADATA / "run.json").read_text()]
         assert len(training_runs) == 1
         training_dir = training_runs[0]
+
+        training_run_metadata = json.loads((training_dir / StorageCategories.METADATA / "run.json").read_text())
+        assert "train" in training_run_metadata["tags"]
 
         hyperparam_path = training_dir / "hyperparameters.json"
         assert hyperparam_path.exists()

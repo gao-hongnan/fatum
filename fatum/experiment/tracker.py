@@ -110,8 +110,13 @@ def run(name: str | None = None, tags: list[str] | None = None) -> Iterator[Run]
 
     try:
         yield r
-    finally:
+    except Exception:
+        from fatum.experiment.types import RunStatus
+        r.complete(RunStatus.FAILED)
+        raise
+    else:
         r.complete()
+    finally:
         _active_run.set(None)
 
 
