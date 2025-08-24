@@ -95,11 +95,3 @@ class LocalStorage:
         """
         path = (self.base_path / key).resolve()
         return path.as_uri()
-
-    async def asave(self, key: StorageKey, source: Path) -> None:
-        """Async save to storage (not implemented for local storage)."""
-        raise NotImplementedError("Async operations not implemented for LocalStorage")
-
-    async def aload(self, key: StorageKey) -> Path:
-        """Async load from storage (not implemented for local storage)."""
-        raise NotImplementedError("Async operations not implemented for LocalStorage")

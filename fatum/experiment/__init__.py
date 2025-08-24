@@ -14,11 +14,7 @@ from fatum.experiment.tracker import (
     get_experiment,
     get_run,
     is_active,
-    log,
     run,
-    save,
-    save_dict,
-    save_text,
     start_run,
 )
 from fatum.experiment.types import (
@@ -56,10 +52,6 @@ __all__ = [
     "run",
     "start_run",
     "finish",
-    "log",
-    "save",
-    "save_dict",
-    "save_text",
     "get_experiment",
     "get_run",
     "is_active",

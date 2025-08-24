@@ -92,11 +92,3 @@ class StorageBackend(Protocol):
             True if key exists
         """
         ...
-
-    async def asave(self, key: StorageKey, source: Path) -> None:
-        """Async save to storage."""
-        raise NotImplementedError("Async save not implemented")
-
-    async def aload(self, key: StorageKey) -> Path:
-        """Async load from storage."""
-        raise NotImplementedError("Async load not implemented")

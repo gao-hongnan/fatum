@@ -6,7 +6,6 @@ from typing import Any, Iterator
 
 from fatum.experiment.experiment import Experiment, Run
 from fatum.experiment.protocols import StorageBackend
-from fatum.experiment.types import FilePath, StorageKey
 
 # NOTE: Context variables for async safety (better than thread-local)
 _active_experiment: contextvars.ContextVar[Experiment | None] = contextvars.ContextVar(
@@ -169,109 +168,6 @@ def finish() -> None:
     if exp and not exp._completed:
         exp.complete()
     _active_experiment.set(None)
-
-
-def log(data: dict[str, Any], step: int | None = None) -> None:
-    """
-    Log metrics to the active run.
-
-    Parameters
-    ----------
-    data : dict
-        Dictionary of metrics to log
-    step : int, optional
-        Step number for this log entry
-
-    Examples
-    --------
-    >>> experiment.log({"loss": 0.23, "accuracy": 0.95})
-    >>> experiment.log({"val_loss": 0.18}, step=100)
-    """
-    run = _active_run.get()
-    if run:
-        run.log_metrics(data, step or 0)
-
-
-def save_dict(data: dict[str, Any], path: str, **json_kwargs: Any) -> None:
-    """
-    Save dictionary to the active experiment.
-
-    Parameters
-    ----------
-    data : dict[str, Any]
-        Dictionary to save as JSON
-    path : str
-        Relative path within the experiment directory
-    **json_kwargs
-        Keyword arguments passed directly to json.dump()
-
-    Examples
-    --------
-    >>> experiment.save_dict({"model": "gpt-4"}, "configs/model.json")
-    >>> experiment.save_dict({"model": "gpt-4"}, "configs/model.json", indent=2)
-    >>> experiment.save_dict(results, "results.json", indent=4, sort_keys=True)
-    """
-    run = _active_run.get()
-    if run:
-        run.save_dict(data, path, **json_kwargs)
-
-
-def save_text(text: str, path: str) -> None:
-    """
-    Save text to the active experiment.
-
-    Parameters
-    ----------
-    text : str
-        Text content to save
-    path : str
-        Relative path within the experiment directory
-
-    Examples
-    --------
-    >>> experiment.save_text("Training complete", "logs/status.txt")
-    """
-    run = _active_run.get()
-    if run:
-        run.save_text(text, path)
-
-
-def save(source: FilePath, path: str | None = None, category: str | None = None) -> list[StorageKey] | None:
-    """
-    Save file or directory to the active experiment.
-
-    Parameters
-    ----------
-    source : Path | str
-        Source file or directory path
-    path : str | None
-        Explicit path within the run directory. If None, uses source name.
-    category : str | None
-        Optional category prefix (e.g., "artifacts", "models").
-
-    Returns
-    -------
-    list[StorageKey] | None
-        List of saved storage keys, or None if no active run
-
-    Examples
-    --------
-    >>> # Save with automatic path
-    >>> experiment.save("model.pkl")
-
-    >>> # Save with explicit path
-    >>> experiment.save("model.pkl", path="models/best_model.pkl")
-
-    >>> # Save with category
-    >>> experiment.save("checkpoint.pt", category="checkpoints")
-
-    >>> # Save directory
-    >>> experiment.save("results/", path="experiment_results")
-    """
-    run = _active_run.get()
-    if run:
-        return run.save(source, path, category)
-    return None
 
 
 def get_experiment() -> Experiment | None:
