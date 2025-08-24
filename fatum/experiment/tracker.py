@@ -18,9 +18,8 @@ _active_run: contextvars.ContextVar[Run | None] = contextvars.ContextVar("_activ
 @contextmanager
 def experiment(
     name: str,
-    id: str | None = None,
-    base_path: FilePath = "./experiments",
     storage: StorageBackend | None = None,
+    id: str | None = None,
     **kwargs: Any,
 ) -> Iterator[Experiment]:
     """
@@ -30,12 +29,10 @@ def experiment(
     ----------
     name : str
         Experiment name (required)
+    storage : StorageBackend | None
+        Storage backend (defaults to LocalStorage("./experiments") if not provided)
     id : str | None
         Optional experiment ID (auto-generated if not provided)
-    base_path : FilePath
-        Base directory for metrics and metadata (default: "./experiments")
-    storage : StorageBackend | None
-        Optional storage backend for artifacts (defaults to LocalStorage)
     **kwargs : Any
         Additional arguments passed to Experiment constructor
 
@@ -61,11 +58,15 @@ def experiment(
     """
     finish()
 
+    if storage is None:
+        from fatum.experiment.storage import LocalStorage
+
+        storage = LocalStorage("./experiments")
+
     exp = Experiment(
         name=name,
-        id=id,
-        base_path=base_path,
         storage=storage,
+        id=id,
         **kwargs,
     )
 

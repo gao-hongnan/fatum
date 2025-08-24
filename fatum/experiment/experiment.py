@@ -12,7 +12,6 @@ from typing import Any, Iterator, Self
 
 from fatum.experiment.exceptions import StateError, ValidationError
 from fatum.experiment.protocols import StorageBackend
-from fatum.experiment.storage import LocalStorage
 from fatum.experiment.types import (
     RUN_METADATA_FILE,
     ExperimentID,
@@ -323,11 +322,8 @@ class Experiment:
         Unique identifier for the experiment (defaults to a random UUID)
     name : str
         Name of the experiment (used to generate unique ID)
-    base_path : FilePath, optional
-        Base directory for metrics and metadata (always local), defaults to "./experiments"
-    storage : StorageBackend | None, optional
-        Optional storage backend for artifacts (defaults to LocalStorage).
-        Users can implement custom backends with just save() and load() methods.
+    storage : StorageBackend
+        Storage backend for all experiment data (LocalStorage, S3Storage, etc.)
     description : str, optional
         Human-readable description of the experiment
     tags : list[str] | None, optional
@@ -341,23 +337,21 @@ class Experiment:
     --------
     Basic usage with local storage:
 
-    >>> exp = Experiment("model_training")
-    >>> # Creates: ./experiments/model_training_abc123/
+    >>> from fatum.experiment.storage import LocalStorage
+    >>> exp = Experiment("model_training", storage=LocalStorage("./experiments"))
     >>>
     >>> with exp.run("epoch_1") as run:
     ...     run.log_metric("loss", 0.5)
     ...     run.log_metric("accuracy", 0.92)
 
-    Using custom S3 storage for artifacts:
+    Using S3 storage:
 
     >>> from my_storage import S3Storage
     >>> exp = Experiment(
     ...     "distributed_training",
-    ...     base_path="./metrics",  # Metrics stay local
-    ...     storage=S3Storage("ml-bucket"),  # Artifacts go to S3
+    ...     storage=S3Storage("ml-bucket"),
     ...     tags=["production", "gpu"]
     ... )
-    >>> exp.log_artifact("model.pkl")  # Uploads directly to S3
 
     Directory structure created:
 
@@ -388,18 +382,14 @@ class Experiment:
     def __init__(
         self,
         name: str,
+        storage: StorageBackend,
         id: str | None = None,
-        base_path: FilePath = "./experiments",
-        storage: StorageBackend | None = None,
         description: str = "",
         tags: list[str] | None = None,
         run_id_prefix: str = "run",
         run_container: str = "runs",
     ) -> None:
-        """Initialize experiment with hybrid storage."""
-
-        # FIXME: this is not well designed, offers no way to `load` experiment back due to
-        # tight coupling in the constructor!
+        """Initialize experiment."""
 
         self.id = ExperimentID(id) if id else ExperimentID(f"{name}_{uuid.uuid4().hex[:8]}")
         self.metadata = ExperimentMetadata(
@@ -410,11 +400,7 @@ class Experiment:
             git_info=get_git_info().model_dump() if get_git_info() else {},
         )
 
-        self._base_path = Path(base_path).expanduser().resolve()
-        self._base_path.mkdir(parents=True, exist_ok=True)
-
-        self._storage = storage or LocalStorage(base_path)
-
+        self._storage = storage
         self._run_id_prefix = run_id_prefix
         self._run_container = run_container
 

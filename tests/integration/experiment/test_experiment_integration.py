@@ -22,7 +22,7 @@ class TestExperimentIntegration:
 
         with experiment(
             name="integration_test",
-            base_path=base_path,
+            storage=LocalStorage(base_path),
             description="Full integration test",
             tags=["test", "integration"],
         ) as exp:
@@ -134,7 +134,7 @@ class TestExperimentIntegration:
 
     def test_experiment_error_recovery(self, tmp_path: Path) -> None:
         """Test that experiment handles errors gracefully."""
-        with pytest.raises(ValueError), experiment("error_test", base_path=tmp_path / "experiments"):
+        with pytest.raises(ValueError), experiment("error_test", storage=LocalStorage(tmp_path / "experiments")):
             with run("run1") as r:
                 r.log_metrics({"metric": 0.5})
 
@@ -157,10 +157,10 @@ class TestExperimentIntegration:
         """Test running multiple experiments sequentially."""
         base_path = tmp_path / "experiments"
 
-        with experiment("exp1", base_path=base_path) as exp1, run("exp1_run") as r:
+        with experiment("exp1", storage=LocalStorage(base_path)) as exp1, run("exp1_run") as r:
             r.log_metrics({"exp1_metric": 0.1})
 
-        with experiment("exp2", base_path=base_path) as exp2, run("exp2_run") as r:
+        with experiment("exp2", storage=LocalStorage(base_path)) as exp2, run("exp2_run") as r:
             r.log_metrics({"exp2_metric": 0.2})
 
         assert (base_path / exp1.id).exists()
@@ -183,7 +183,7 @@ class TestExperimentIntegration:
         subdir.mkdir()
         (subdir / "nested.txt").write_text("Nested content")
 
-        with experiment("large_test", base_path=tmp_path / "experiments"), run("artifact_run") as r:
+        with experiment("large_test", storage=LocalStorage(tmp_path / "experiments")), run("artifact_run") as r:
             keys = r.save(artifacts_dir, path="all_artifacts")
 
             assert len(keys) == 6
@@ -196,7 +196,7 @@ class TestExperimentIntegration:
 
     def test_concurrent_runs_data_isolation(self, tmp_path: Path) -> None:
         """Test that data from different runs is properly isolated."""
-        with experiment("isolation_test", base_path=tmp_path / "experiments") as exp:
+        with experiment("isolation_test", storage=LocalStorage(tmp_path / "experiments")) as exp:
             run_data = {}
 
             for i in range(3):
@@ -220,7 +220,7 @@ class TestExperimentIntegration:
 
         with experiment(
             name="metadata_test",
-            base_path=tmp_path / "experiments",
+            storage=LocalStorage(tmp_path / "experiments"),
             description="Testing metadata",
             tags=["meta", "test"],
         ) as exp:
