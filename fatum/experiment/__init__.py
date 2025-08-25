@@ -7,7 +7,6 @@ from fatum.experiment.exceptions import (
 )
 from fatum.experiment.experiment import Experiment, Run
 from fatum.experiment.protocols import Storage
-from fatum.experiment.storage import LocalStorage
 from fatum.experiment.tracker import (
     experiment,
     finish,
@@ -15,7 +14,6 @@ from fatum.experiment.tracker import (
     get_run,
     is_active,
     run,
-    start_run,
 )
 from fatum.experiment.types import (
     ArtifactKey,
@@ -33,7 +31,6 @@ __all__ = [
     "Experiment",
     "Run",
     "Storage",
-    "LocalStorage",
     "ArtifactKey",
     "ExperimentID",
     "MetricKey",
@@ -50,7 +47,6 @@ __all__ = [
     "StateError",
     "experiment",
     "run",
-    "start_run",
     "finish",
     "get_experiment",
     "get_run",

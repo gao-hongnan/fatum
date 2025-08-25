@@ -172,8 +172,9 @@ class Experiment(Generic[StorageT]):
         ...     print(run.metadata["learning_rate"])  # Access metadata
         """
         run_id = RunID(name) if name else RunID(f"run_{uuid.uuid4().hex[:8]}")
-        run = Run[StorageT](run_id, self._storage, self.id, metadata)
-        yield run
+        run_obj = Run(run_id, self._storage, self.id, metadata)
+        with run_obj as run:
+            yield run
 
     def __enter__(self) -> Self:
         """Enter experiment context."""

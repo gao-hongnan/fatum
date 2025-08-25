@@ -2,33 +2,36 @@ from __future__ import annotations
 
 import contextvars
 from contextlib import contextmanager
-from typing import Any, Iterator
+from typing import Any, Iterator, TypeVar, cast
 
 from fatum.experiment.experiment import Experiment, Run
 from fatum.experiment.protocols import Storage
 
+StorageT = TypeVar("StorageT", bound=Storage)
+
 # NOTE: Context variables for async safety (better than thread-local)
-_active_experiment: contextvars.ContextVar[Experiment | None] = contextvars.ContextVar(
+# We use Storage as the type parameter since it's the bound for StorageT
+_active_experiment: contextvars.ContextVar[Experiment[Storage] | None] = contextvars.ContextVar(
     "_active_experiment", default=None
 )
-_active_run: contextvars.ContextVar[Run | None] = contextvars.ContextVar("_active_run", default=None)
+_active_run: contextvars.ContextVar[Run[Storage] | None] = contextvars.ContextVar("_active_run", default=None)
 
 
 @contextmanager
 def experiment(
     name: str,
-    storage: Storage | None = None,
+    storage: StorageT,
     id: str | None = None,
     **kwargs: Any,
-) -> Iterator[Experiment]:
+) -> Iterator[Experiment[StorageT]]:
     """Context manager for creating and managing experiments.
 
     Parameters
     ----------
     name : str
         Experiment name (required)
-    storage : Storage | None
-        Storage backend (defaults to LocalStorage("./experiments") if not provided)
+    storage : Storage
+        Storage backend (required - users must provide their own storage implementation)
     id : str | None
         Optional experiment ID (auto-generated if not provided)
     **kwargs : Any
@@ -36,29 +39,29 @@ def experiment(
 
     Yields
     ------
-    Experiment
-        The experiment instance
+    Experiment[StorageT]
+        The experiment instance with preserved storage type
 
     Examples
     --------
     Single-run experiment:
-    >>> with experiment("training") as exp:
+    >>> class MyStorage:
+    ...     def initialize(self, run_id: str, experiment_id: str) -> None: ...
+    ...     def finalize(self, status: str) -> None: ...
+    ...     def log_metric(self, key: str, value: float) -> None: ...
+    >>>
+    >>> storage = MyStorage()
+    >>> with experiment("training", storage=storage) as exp:
     ...     with run() as r:
     ...         r.storage.log_metric("loss", 0.5)
 
     Multi-run experiment:
-    >>> with experiment("hyperparam_search") as exp:
+    >>> with experiment("hyperparam_search", storage=storage) as exp:
     ...     for lr in [0.001, 0.01]:
     ...         with run(f"lr_{lr}") as r:
-    ...             r.storage.log_param("lr", lr)
     ...             r.storage.log_metric("loss", 0.5)
     """
     finish()
-
-    if storage is None:
-        from fatum.experiment.storage import LocalStorage
-
-        storage = LocalStorage("./experiments")
 
     exp = Experiment(
         name=name,
@@ -67,7 +70,8 @@ def experiment(
         **kwargs,
     )
 
-    _active_experiment.set(exp)
+    # NOTE: Cast to base Storage type when storing in context var (intentional type erasure)
+    _active_experiment.set(cast(Experiment[Storage], exp))
 
     try:
         yield exp
@@ -76,34 +80,36 @@ def experiment(
 
 
 @contextmanager
-def run(name: str | None = None, tags: list[str] | None = None) -> Iterator[Run]:
+def run(name: str | None = None, **metadata: Any) -> Iterator[Run[Storage]]:
     """Context manager for creating and managing runs within the active experiment.
 
     Parameters
     ----------
     name : str | None
         Optional name for the run
-    tags : list[str] | None
-        Optional tags for the run
+    **metadata : Any
+        Additional metadata to store with the run
 
     Yields
     ------
-    Run
+    Run[Storage]
         The run instance
 
     Examples
     --------
     >>> with experiment("training") as exp:
-    ...     with run("epoch_1") as r:
+    ...     with run("epoch_1", learning_rate=0.001) as r:
     ...         r.storage.log_metric("loss", 0.5)
+    ...         print(r.metadata["learning_rate"])  # Access metadata
     """
     exp = _active_experiment.get()
     if not exp:
         raise RuntimeError("No active experiment. Use experiment() context manager first.")
 
     # NOTE: Use the experiment's run() context manager
-    with exp.run(name or "") as r:
-        _active_run.set(r)
+    with exp.run(name or "", **metadata) as r:
+        # NOTE: Cast to base Storage type when storing in context var (intentional type erasure)
+        _active_run.set(cast(Run[Storage], r))
         try:
             yield r
         finally:
@@ -116,12 +122,12 @@ def finish() -> None:
     _active_experiment.set(None)
 
 
-def get_experiment() -> Experiment | None:
+def get_experiment() -> Experiment[Storage] | None:
     """Get the active experiment (for advanced usage).
 
     Returns
     -------
-    Experiment | None
+    Experiment[Storage] | None
         The active experiment or None if no experiment is active
 
     Examples
@@ -133,12 +139,12 @@ def get_experiment() -> Experiment | None:
     return _active_experiment.get()
 
 
-def get_run() -> Run | None:
+def get_run() -> Run[Storage] | None:
     """Get the active run (for advanced usage).
 
     Returns
     -------
-    Run | None
+    Run[Storage] | None
         The active run or None if no run is active
 
     Examples
