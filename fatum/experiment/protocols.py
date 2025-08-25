@@ -1,94 +1,34 @@
 from __future__ import annotations
 
-from pathlib import Path
 from typing import Protocol, runtime_checkable
-
-from fatum.experiment.types import StorageKey
 
 
 @runtime_checkable
-class StorageBackend(Protocol):
-    """Protocol for storage backends.
+class Storage(Protocol):
+    def initialize(self, run_id: str, experiment_id: str) -> None:
+        """Initialize storage for a run.
 
-    All storage implementations must provide these methods to work
-    with the experiment tracking system.
-    """
-
-    def save(self, key: StorageKey, source: Path) -> None:
-        """Save a file to storage.
+        Called when entering the run context. Storage can set up directories,
+        connections, or any other initialization needed.
 
         Parameters
         ----------
-        key : StorageKey
-            Storage key (path in storage)
-        source : Path
-            Local file path to save
+        run_id : str
+            Unique identifier for the run
+        experiment_id : str
+            Parent experiment identifier
         """
         ...
 
-    def load(self, key: StorageKey) -> Path:
-        """Load a file from storage.
+    def finalize(self, status: str) -> None:
+        """Finalize storage when run completes.
 
-        For remote storage, this downloads the file to a temporary location.
-        For local storage, returns the actual file path.
-
-        Parameters
-        ----------
-        key : StorageKey
-            Storage key (path in storage)
-
-        Returns
-        -------
-        Path
-            Local path where file can be accessed
-        """
-        ...
-
-    def get_uri(self, key: StorageKey) -> str:
-        """Get URI/location of artifact without downloading.
+        Called when exiting the run context. Storage can flush buffers,
+        close connections, update metadata, etc.
 
         Parameters
         ----------
-        key : StorageKey
-            Storage key
-
-        Returns
-        -------
-        str
-            URI for the artifact:
-            - Local: file:///absolute/path/to/artifact
-            - S3: s3://bucket/key
-            - GCS: gs://bucket/key
-            - HTTP: https://storage.example.com/key
-        """
-        ...
-
-    def list_keys(self, prefix: StorageKey | None = None) -> list[StorageKey]:
-        """List all keys with given prefix.
-
-        Parameters
-        ----------
-        prefix : StorageKey
-            Key prefix to filter by
-
-        Returns
-        -------
-        list[StorageKey]
-            List of storage keys
-        """
-        ...
-
-    def exists(self, key: StorageKey) -> bool:
-        """Check if a key exists in storage.
-
-        Parameters
-        ----------
-        key : StorageKey
-            Storage key to check
-
-        Returns
-        -------
-        bool
-            True if key exists
+        status : str
+            Final run status (completed/failed/killed)
         """
         ...

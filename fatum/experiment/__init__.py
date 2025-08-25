@@ -6,7 +6,7 @@ from fatum.experiment.exceptions import (
     ValidationError,
 )
 from fatum.experiment.experiment import Experiment, Run
-from fatum.experiment.protocols import StorageBackend
+from fatum.experiment.protocols import Storage
 from fatum.experiment.storage import LocalStorage
 from fatum.experiment.tracker import (
     experiment,
@@ -32,7 +32,7 @@ from fatum.experiment.types import (
 __all__ = [
     "Experiment",
     "Run",
-    "StorageBackend",
+    "Storage",
     "LocalStorage",
     "ArtifactKey",
     "ExperimentID",
