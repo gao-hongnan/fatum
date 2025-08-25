@@ -263,23 +263,6 @@ class Run:
         finally:
             tmp_path.unlink()
 
-    async def asave(
-        self,
-        source: Path,
-        path: str | None = None,
-        category: str | None = None,
-    ) -> list[StorageKey]:
-        """Async version of save."""
-        raise NotImplementedError("Async save not yet implemented")
-
-    async def asave_dict(self, data: dict[str, Any], path: str) -> StorageKey:
-        """Async version of save_dict."""
-        raise NotImplementedError("Async save_dict not yet implemented")
-
-    async def asave_text(self, text: str, path: str) -> StorageKey:
-        """Async version of save_text."""
-        raise NotImplementedError("Async save_text not yet implemented")
-
     def complete(self, status: RunStatus = RunStatus.COMPLETED) -> None:
         """Complete the run and save all data."""
         if self._completed:
