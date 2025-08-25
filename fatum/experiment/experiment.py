@@ -40,7 +40,7 @@ from __future__ import annotations
 import uuid
 from contextlib import contextmanager
 from types import TracebackType
-from typing import Iterator, Self
+from typing import Any, Generic, Iterator, Self, TypeVar
 
 from fatum.experiment.protocols import Storage
 from fatum.experiment.types import (
@@ -48,8 +48,10 @@ from fatum.experiment.types import (
     RunID,
 )
 
+StorageT = TypeVar("StorageT", bound=Storage)
 
-class Run:
+
+class Run(Generic[StorageT]):
     """A run is just a lifecycle manager - nothing more.
 
     The Run class is a context manager that calls storage.initialize() on enter
@@ -67,7 +69,7 @@ class Run:
 
     Attributes
     ----------
-    storage : Storage
+    storage : StorageT
         Direct access to storage - can have ANY methods!
 
     Examples
@@ -82,12 +84,14 @@ class Run:
     def __init__(
         self,
         run_id: RunID,
-        storage: Storage,
+        storage: StorageT,
         experiment_id: ExperimentID,
+        metadata: dict[str, Any] | None = None,
     ) -> None:
         self.id = run_id
         self.experiment_id = experiment_id
-        self.storage = storage  # Direct access to storage!
+        self.metadata = metadata or {}
+        self.storage = storage
         self._completed = False
 
     def __enter__(self) -> Self:
@@ -108,7 +112,7 @@ class Run:
             self._completed = True
 
 
-class Experiment:
+class Experiment(Generic[StorageT]):
     """An experiment is just a lifecycle manager.
 
     The Experiment class creates Run instances and passes them the storage.
@@ -118,7 +122,7 @@ class Experiment:
     ----------
     name : str
         Name of the experiment
-    storage : Storage
+    storage : StorageT
         Storage backend for ALL operations
     id : str | None, optional
         Unique identifier (auto-generated if not provided)
@@ -135,41 +139,41 @@ class Experiment:
     def __init__(
         self,
         name: str,
-        storage: Storage,
+        storage: StorageT,
         id: str | None = None,
+        **metadata: Any,
     ) -> None:
         self.id = ExperimentID(id) if id else ExperimentID(f"{name}_{uuid.uuid4().hex[:8]}")
         self.name = name
+        self.metadata = metadata
         self._storage = storage
         self._completed = False
 
     @contextmanager
-    def run(self, name: str = "") -> Iterator[Run]:
+    def run(self, name: str = "", **metadata: Any) -> Iterator[Run[StorageT]]:
         """Create and manage a run.
 
         Parameters
         ----------
         name : str, optional
             Name for the run (auto-generated if not provided)
+        **metadata : Any
+            Additional metadata to store with the run
 
         Yields
         ------
-        Run
+        Run[StorageT]
             Run instance with direct storage access
 
         Examples
         --------
-        >>> with exp.run("epoch_1") as run:
+        >>> with exp.run("epoch_1", learning_rate=0.001) as run:
         ...     run.storage.log_metric("loss", 0.5)
-        ...     # Storage can have ANY methods!
+        ...     print(run.metadata["learning_rate"])  # Access metadata
         """
         run_id = RunID(name) if name else RunID(f"run_{uuid.uuid4().hex[:8]}")
-        run = Run(run_id, self._storage, self.id)
-
-        try:
-            yield run
-        except Exception:  # noqa: TRY203
-            raise
+        run = Run[StorageT](run_id, self._storage, self.id, metadata)
+        yield run
 
     def __enter__(self) -> Self:
         """Enter experiment context."""
