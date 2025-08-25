@@ -7,9 +7,11 @@ import timeit
 import types
 from typing import (
     Callable,
+    Coroutine,
     ParamSpec,
     Self,
     TypeVar,
+    cast,
 )
 
 P = ParamSpec("P")
@@ -71,7 +73,7 @@ class Timer:
     ) -> None:
         self.elapsed_seconds = timeit.default_timer() - self._start
         if not self._silent:
-            name = self._name or "Code block"
+            name = self._name or "code"
             logger.info(f"{name} took {self.elapsed_seconds:.4f} seconds to execute.")
 
     async def __aenter__(self) -> Self:
@@ -122,9 +124,11 @@ def timer(name: str | None = None, *, silent: bool = False) -> Callable[[Callabl
             @functools.wraps(func)
             async def async_wrapper(*args: P.args, **kwargs: P.kwargs) -> R:
                 async with Timer(name or func.__name__, silent=silent):
-                    return await func(*args, **kwargs)  # type: ignore[no-any-return]
+                    # NOTE: Cast needed because type system doesn't know func is async here
+                    coro_func = cast(Callable[P, Coroutine[object, object, R]], func)
+                    return await coro_func(*args, **kwargs)
 
-            return async_wrapper  # type: ignore[return-value]
+            return cast(Callable[P, R], async_wrapper)
         else:
 
             @functools.wraps(func)
