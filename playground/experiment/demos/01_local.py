@@ -7,6 +7,22 @@ demonstrating how to:
 - Save artifacts (models, configs, reports) with proper organization
 - Access experiment paths and artifacts programmatically
 
+Type Safety Note:
+-----------------
+This demo uses `exp.run()` instead of `experiment.run()` to preserve type information.
+
+Why the difference?
+- `exp.run()`: Returns Run[LocalStorage] - preserves the specific storage type
+- `experiment.run()`: Returns Run[Storage] - loses type information due to context variable type erasure
+
+When you use `experiment.run()` (the standalone function), it retrieves the experiment
+from a context variable that has been type-erased to Experiment[Storage]. This means
+the specific LocalStorage type is lost, and type checkers will complain when accessing
+custom methods like save_dict(), log_metrics(), etc.
+
+By using `exp.run()` directly on the experiment instance, we maintain full type safety
+because the experiment knows its concrete storage type (LocalStorage).
+
 Usage:
     # Run both demos (default)
     uv run -m experiment.demos.01_local
@@ -54,6 +70,9 @@ Output Structure:
 from __future__ import annotations
 
 import argparse
+import json
+import random
+import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -64,6 +83,7 @@ from rich.table import Table
 
 from fatum import experiment
 from fatum.experiment.experiment import Run
+from fatum.experiment.types import Metric, MetricKey
 from fatum.reproducibility.git import get_git_info
 
 from .utils import show_directory_tree, simulate_model_training
@@ -71,15 +91,127 @@ from .utils import show_directory_tree, simulate_model_training
 console = Console()
 
 
-def _run_and_collect_metrics(run: Run, config: dict[str, Any], epochs: int = 5) -> dict[str, Any]:
+class LocalStorage:
+    def __init__(self, base_path: str | Path) -> None:
+        self.base_path = Path(base_path).expanduser().resolve()
+        self.base_path.mkdir(parents=True, exist_ok=True)
+        self._run_path: Path | None = None
+        self._metrics_buffer: list[Metric] = []
+
+    def initialize(self, run_id: str, experiment_id: str) -> None:
+        """Initialize storage for a run (required by Storage protocol)."""
+        self._run_path = self.base_path / experiment_id / "runs" / run_id
+        self._run_path.mkdir(parents=True, exist_ok=True)
+
+        metadata = {
+            "run_id": run_id,
+            "experiment_id": experiment_id,
+            "started_at": datetime.now().isoformat(),
+            "status": "running",
+        }
+        (self._run_path / "metadata.json").write_text(json.dumps(metadata, indent=2))
+
+    def finalize(self, status: str) -> None:
+        """Finalize storage when run completes (required by Storage protocol)."""
+        if not self._run_path:
+            return
+
+        if self._metrics_buffer:
+            self.flush_metrics()
+
+        metadata_file = self._run_path / "metadata.json"
+        if metadata_file.exists():
+            metadata = json.loads(metadata_file.read_text())
+            metadata.update(
+                {
+                    "status": status,
+                    "ended_at": datetime.now().isoformat(),
+                }
+            )
+            metadata_file.write_text(json.dumps(metadata, indent=2))
+
+    def log_metrics(self, metrics: dict[str, float], step: int = 0) -> None:
+        """Log multiple metrics at once."""
+        if not self._run_path:
+            return
+
+        for key, value in metrics.items():
+            metric = Metric(key=MetricKey(key), value=value, step=step)
+            self._metrics_buffer.append(metric)
+
+        # Auto-flush if buffer is large
+        if len(self._metrics_buffer) >= 100:
+            self.flush_metrics()
+
+    def log_metric(self, key: MetricKey, value: float, step: int = 0) -> None:
+        """Log a single metric."""
+        if not self._run_path:
+            return
+
+        metric = Metric(key=key, value=value, step=step)
+        self._metrics_buffer.append(metric)
+
+        if len(self._metrics_buffer) >= 100:
+            self.flush_metrics()
+
+    def flush_metrics(self) -> None:
+        """Flush buffered metrics to disk."""
+        if not self._metrics_buffer or not self._run_path:
+            return
+
+        metrics_dir = self._run_path / "metrics"
+        metrics_dir.mkdir(exist_ok=True)
+
+        timestamp = int(datetime.now().timestamp() * 1000000)
+        metrics_file = metrics_dir / f"batch_{timestamp}.jsonl"
+
+        with metrics_file.open("w") as f:
+            for metric in self._metrics_buffer:
+                f.write(json.dumps(metric.model_dump(mode="json")) + "\n")
+
+        self._metrics_buffer.clear()
+
+    def save_dict(self, data: dict[str, Any], path: str) -> None:
+        """Save a dictionary as JSON."""
+        if not self._run_path:
+            return
+
+        file_path = self._run_path / path
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(json.dumps(data, indent=2))
+
+    def save_text(self, content: str, path: str) -> None:
+        """Save text content to a file."""
+        if not self._run_path:
+            return
+
+        file_path = self._run_path / path
+        file_path.parent.mkdir(parents=True, exist_ok=True)
+        file_path.write_text(content)
+
+    def save(self, source: Path, path: str) -> None:
+        """Save a file or directory."""
+        if not self._run_path:
+            return
+
+        dest = self._run_path / path
+        dest.parent.mkdir(parents=True, exist_ok=True)
+
+        if source.is_file():
+            shutil.copy2(source, dest)
+        else:
+            shutil.copytree(source, dest, dirs_exist_ok=True)
+
+
+def _run_and_collect_metrics(run: Run[LocalStorage], config: dict[str, Any], epochs: int = 5) -> dict[str, Any]:
     """Run training and collect metrics without printing."""
-    run.save_dict(config, "config.json")
+    run.storage.save_dict(config, "config.json")
 
     metrics = simulate_model_training(epochs=epochs)
     for i, metric in enumerate(metrics):
-        run.log_metrics(metric, step=i)
+        run.storage.log_metrics(metric, step=i)
 
-    run.save_text(
+    run.storage.save_text(
         f"# Training Report\n\nFinal accuracy: {metrics[-1]['accuracy']:.3f}\nFinal loss: {metrics[-1]['loss']:.3f}",
         "reports/training_report.md",
     )
@@ -90,11 +222,11 @@ def _run_and_collect_metrics(run: Run, config: dict[str, Any], epochs: int = 5) 
         "input_shape": [224, 224, 3],
         "output_classes": 1000,
     }
-    run.save_dict(model_info, "model/architecture.json")
+    run.storage.save_dict(model_info, "model/architecture.json")
 
     model_path = Path("dummy_model.txt")
     model_path.write_text("Pretrained model weights (simulated)")
-    run.save(model_path, path="model/weights.pkl")
+    run.storage.save(model_path, path="model/weights.pkl")
     model_path.unlink()
 
     return {
@@ -114,12 +246,12 @@ def run_single(output_dir: Path) -> None:
 
     with experiment.experiment(
         name=experiment_name,
+        storage=LocalStorage(storage_dir),
         id=experiment_name,
-        base_path=storage_dir,
         description=f"Training a neural network model with {commit_hash}",
         tags=["demo", "local", "training"],
     ) as exp:
-        with experiment.run("main") as r:
+        with exp.run("main") as r:
             config = {
                 "model": "resnet50",
                 "dataset": "imagenet",
@@ -158,15 +290,15 @@ def run_multiple(output_dir: Path) -> None:
 
     with experiment.experiment(
         name=experiment_name,
+        storage=LocalStorage(storage_dir),
         id=experiment_name,
-        base_path=storage_dir,
         description="Testing different learning rates",
         tags=["demo", "hyperparameter_search", "multiple_runs"],
     ) as exp:
         learning_rates = [0.001, 0.01]
 
         for lr in learning_rates:
-            with experiment.run(f"lr_{lr}", tags=[f"lr={lr}"]) as r:
+            with exp.run(f"lr_{lr}") as r:
                 config = {
                     "model": "resnet50",
                     "dataset": "imagenet",
@@ -181,11 +313,11 @@ def run_multiple(output_dir: Path) -> None:
 
                 final_metrics = results["metrics"][-1]
                 summary = f"Learning Rate: {lr}\nFinal Loss: {final_metrics['loss']:.3f}\nFinal Accuracy: {final_metrics['accuracy']:.3f}"
-                r.save_text(summary, "summary.txt")
+                r.storage.save_text(summary, "summary.txt")
 
                 model_path = Path(f"model_lr_{lr}.txt")
                 model_path.write_text(f"Model weights trained with lr={lr}")
-                r.save(model_path, path="model/weights.pkl")
+                r.storage.save(model_path, path="model/weights.pkl")
                 model_path.unlink()
 
         table = Table(title=f"Hyperparameter Search Results - {exp.id}")
@@ -210,6 +342,59 @@ def run_multiple(output_dir: Path) -> None:
         console.print(f"   ID: [green]{exp.id}[/green]")
 
 
+def run_flexible_containers(output_dir: Path) -> None:
+    """Demonstrate flexible run container configuration."""
+    storage_dir = output_dir / "flexible_containers"
+
+    console.print("\n[yellow]Demo 1: Flat structure (no runs/ folder)[/yellow]")
+    storage = LocalStorage(storage_dir / "flat")
+    with experiment.experiment(
+        name="ml_pipeline",
+        storage=storage,
+        description="ML pipeline with flat structure",
+    ) as exp:
+        stages = ["preprocessing", "training", "evaluation"]
+        for stage in stages:
+            with exp.run(stage) as r:
+                r.storage.log_metric(MetricKey("duration_seconds"), random.uniform(10, 100))
+                r.storage.log_metric(MetricKey("records_processed"), random.randint(1000, 10000))
+                console.print(f"  ✓ {stage}: {r.id}")
+
+    console.print("\n[yellow]Demo 2: Custom container (models/)[/yellow]")
+    storage = LocalStorage(storage_dir / "custom")
+    with experiment.experiment(
+        name="model_iterations",
+        storage=storage,
+        description="Model iterations under models/ folder",
+    ) as exp:
+        models = ["baseline", "optimized", "final"]
+        for model_name in models:
+            with exp.run(model_name) as r:
+                r.storage.log_metric(MetricKey("f1_score"), random.uniform(0.7, 0.95))
+                r.storage.log_metric(MetricKey("latency_ms"), random.uniform(10, 50))
+                console.print(f"  ✓ {model_name}: {r.id}")
+
+    console.print("\n[yellow]Demo 3: Data pipeline stages[/yellow]")
+    storage = LocalStorage(storage_dir / "pipeline")
+    with experiment.experiment(
+        name="etl_pipeline",
+        storage=storage,
+        description="ETL pipeline with stage-based organization",
+    ) as exp:
+        pipeline_stages = [
+            ("extract", {"sources": 5, "rows": 50000}),
+            ("transform", {"transformations": 12, "rows": 48000}),
+            ("load", {"tables": 3, "rows": 48000}),
+        ]
+        for stage_name, metrics in pipeline_stages:
+            with exp.run(stage_name) as r:
+                for key, value in metrics.items():
+                    r.storage.log_metric(MetricKey(key), value)
+                console.print(f"  ✓ {stage_name}: {r.id}")
+
+    console.print(f"\n📁 All experiments saved to: [cyan]{storage_dir.resolve()}[/cyan]")
+
+
 def run() -> None:
     """Main entry point with argparse."""
     parser = argparse.ArgumentParser(
@@ -218,9 +403,9 @@ def run() -> None:
     )
     parser.add_argument(
         "--mode",
-        choices=["single", "multiple", "both"],
-        default="both",
-        help="Which demo to run (default: both)",
+        choices=["single", "multiple", "flexible", "all"],
+        default="all",
+        help="Which demo to run (default: all)",
     )
     parser.add_argument(
         "--output-dir",
@@ -238,17 +423,21 @@ def run() -> None:
         )
     )
 
-    if args.mode in ["single", "both"]:
+    if args.mode in ["single", "all"]:
         console.print("\n[bold]Single Run Demo[/bold]")
         run_single(args.output_dir)
 
-    if args.mode in ["multiple", "both"]:
+    if args.mode in ["multiple", "all"]:
         console.print("\n[bold]Multiple Runs Demo[/bold]")
         run_multiple(args.output_dir)
 
-    if args.mode == "both":
+    if args.mode in ["flexible", "all"]:
+        console.print("\n[bold]Flexible Run Containers Demo[/bold]")
+        run_flexible_containers(args.output_dir)
+
+    if args.mode in ["all"]:
         console.print("\n[bold]Directory Structure:[/bold]")
-        for subdir in ["local", "local_multi"]:
+        for subdir in ["local", "local_multi", "flexible_containers"]:
             path = args.output_dir / subdir
             if path.exists():
                 show_directory_tree(path, max_depth=2)
