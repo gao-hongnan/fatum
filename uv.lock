@@ -662,7 +662,7 @@ wheels = [
 
 [[package]]
 name = "fatum"
-version = "13.0.0"
+version = "15.0.0"
 source = { editable = "." }
 dependencies = [
     { name = "anthropic" },
