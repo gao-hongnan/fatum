@@ -102,7 +102,7 @@ class Run(Generic[StorageT]):
 
     def __enter__(self) -> Self:
         """Enter context - initialize storage."""
-        self.storage.initialize(str(self.id), str(self.experiment_id))
+        self.storage.initialize(run_id=str(self.id), experiment_id=str(self.experiment_id))
         return self
 
     def __exit__(
@@ -114,7 +114,7 @@ class Run(Generic[StorageT]):
         """Exit context - finalize storage."""
         status = "failed" if exc_type else "completed"
         if not self._completed:
-            self.storage.finalize(status)
+            self.storage.finalize(status=status)
             self._completed = True
 
 
