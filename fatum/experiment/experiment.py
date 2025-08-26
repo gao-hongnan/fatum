@@ -52,10 +52,10 @@ StorageT = TypeVar("StorageT", bound=Storage)
 
 
 class Run(Generic[StorageT]):
-    """A run is just a lifecycle manager - nothing more.
+    """A run is just a lifecycle manager.
 
     The Run class is a context manager that calls storage.initialize() on enter
-    and storage.finalize() on exit. That's it. All actual operations are done
+    and storage.finalize() on exit. All actual operations are done
     through storage, which users access directly.
 
     Parameters
@@ -70,7 +70,7 @@ class Run(Generic[StorageT]):
     Attributes
     ----------
     storage : StorageT
-        Direct access to storage - can have ANY methods!
+        Direct access to storage - can have any methods!
 
     Examples
     --------
@@ -90,9 +90,15 @@ class Run(Generic[StorageT]):
     ) -> None:
         self.id = run_id
         self.experiment_id = experiment_id
-        self.metadata = metadata or {}
         self.storage = storage
         self._completed = False
+
+        self.metadata = {
+            **(metadata or {}),
+            "name": metadata.get("name", str(self.id)) if metadata else str(self.id),
+            "id": str(self.id),
+            "experiment_id": str(self.experiment_id),
+        }
 
     def __enter__(self) -> Self:
         """Enter context - initialize storage."""
@@ -133,7 +139,7 @@ class Experiment(Generic[StorageT]):
     >>> exp = Experiment("training", storage=storage)
     >>>
     >>> with exp.run() as run:
-    ...     run.storage.do_anything()  # Storage handles everything!
+    ...     run.storage.do_anything()
     """
 
     def __init__(
@@ -145,9 +151,14 @@ class Experiment(Generic[StorageT]):
     ) -> None:
         self.id = ExperimentID(id) if id else ExperimentID(f"{name}_{uuid.uuid4().hex[:8]}")
         self.name = name
-        self.metadata = metadata
         self._storage = storage
         self._completed = False
+
+        self.metadata = {
+            **(metadata or {}),
+            "name": name,
+            "id": str(self.id),
+        }
 
     @contextmanager
     def run(self, name: str = "", **metadata: Any) -> Iterator[Run[StorageT]]:
@@ -169,10 +180,17 @@ class Experiment(Generic[StorageT]):
         --------
         >>> with exp.run("epoch_1", learning_rate=0.001) as run:
         ...     run.storage.log_metric("loss", 0.5)
-        ...     print(run.metadata["learning_rate"])  # Access metadata
+        ...     print(run.metadata["learning_rate"])
         """
         run_id = RunID(name) if name else RunID(f"run_{uuid.uuid4().hex[:8]}")
-        run_obj = Run(run_id, self._storage, self.id, metadata)
+
+        run_metadata = {
+            **metadata,
+            "name": name if name else str(run_id),
+            "id": str(run_id),
+        }
+
+        run_obj = Run(run_id=run_id, storage=self._storage, experiment_id=self.id, metadata=run_metadata)
         with run_obj as run:
             yield run
 
