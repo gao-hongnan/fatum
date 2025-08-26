@@ -67,6 +67,10 @@ class S3Config(BaseModel):
 
     cache_dir: Path = Field(default_factory=lambda: Path("./cache"), description="Local cache directory")
     auto_create_bucket: bool = Field(default=True, description="Auto-create bucket if missing")
+    exclude_patterns: list[str] = Field(
+        default_factory=lambda: [".DS_Store", "Thumbs.db", "desktop.ini", "*.pyc", "__pycache__"],
+        description="File patterns to exclude from uploads",
+    )
 
     @field_validator("cache_dir", mode="before")
     @classmethod
@@ -245,13 +249,15 @@ class S3Storage:
 
     def _upload_directory(self, prefix: str, directory: Path) -> dict[str, str]:
         files = [
-            (f, f"{prefix}/{f.relative_to(directory)}".replace("\\", "/")) for f in directory.rglob("*") if f.is_file()
+            (f, f"{prefix}/{f.relative_to(directory)}".replace("\\", "/"))
+            for f in directory.rglob("*")
+            if f.is_file() and not any(f.match(p) for p in self.config.exclude_patterns)
         ]
 
         if not files:
             return {}
 
-        results = {}
+        results: dict[str, str] = {}
         with ThreadPoolExecutor(max_workers=self.config.max_concurrency) as executor:
             futures = {
                 executor.submit(self._upload_file, s3_key, local_path): (str(local_path), s3_key)
@@ -259,12 +265,12 @@ class S3Storage:
             }
 
             for future in as_completed(futures):
-                local_path, _ = futures[future]
+                local_path_str, _ = futures[future]
                 try:
                     uri = future.result()
-                    results[local_path] = uri
+                    results[local_path_str] = uri
                 except Exception as e:
-                    print(f"Failed to upload {local_path}: {e}")
+                    print(f"Failed to upload {local_path_str}: {e}")
 
         return results
 
