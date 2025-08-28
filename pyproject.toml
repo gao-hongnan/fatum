@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "fatum"
-version = "18.0.0"
+version = "19.0.0"
 description = "A collection of code for Fatum."
 authors = [{name="GAO Hongnan", email="hongnangao@gmail.com"}]
 readme = "README.md"
@@ -20,7 +20,7 @@ classifiers = [
 dependencies = [
     "anthropic>=0.59.0",
     "google-genai>=1.27.0",
-    "instructor>=1.0.0",
+    "instructor==1.10.0",
     "jsonref>=1.1.0",
     "nest-asyncio>=1.6.0",
     "openai>=1.97.1",
